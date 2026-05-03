@@ -146,6 +146,16 @@ func main() {
                 jsonOK(w, map[string]interface{}{"success": true})
         })
 
+        mux.HandleFunc("/api/ai/providers", func(w http.ResponseWriter, r *http.Request) {
+                jsonOK(w, map[string]interface{}{
+                        "groq":      cfg.APIKeys.Groq != "",
+                        "anthropic": cfg.APIKeys.Anthropic != "",
+                        "openai":    cfg.APIKeys.OpenAI != "",
+                        "google":    cfg.APIKeys.Google != "",
+                        "preferred": preferredAIProvider(cfg),
+                })
+        })
+
         mux.HandleFunc("/api/analytics", func(w http.ResponseWriter, r *http.Request) {
                 data, err := bot.GetAnalytics()
                 if err != nil {
@@ -243,4 +253,20 @@ func jsonError(w http.ResponseWriter, msg string, code int) {
         w.Header().Set("Content-Type", "application/json")
         w.WriteHeader(code)
         json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "error": msg})
+}
+
+func preferredAIProvider(cfg *Config) string {
+        if cfg.APIKeys.Groq != "" {
+                return "groq"
+        }
+        if cfg.APIKeys.Anthropic != "" {
+                return "anthropic"
+        }
+        if cfg.APIKeys.OpenAI != "" {
+                return "openai"
+        }
+        if cfg.APIKeys.Google != "" {
+                return "google"
+        }
+        return "none"
 }
