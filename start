@@ -1,0 +1,64 @@
+#!/bin/bash
+# start - Build dan jalankan CloddsBot dengan auto-rebuild saat kode Go berubah
+
+BINARY="./cloddsbot"
+REF_FILE="/tmp/.cloddsbot_ref"
+SERVER_PID=""
+
+build() {
+    echo "🔨 Building..."
+    if go build -o "$BINARY" . 2>&1; then
+        echo "✅ Build berhasil"
+        touch "$REF_FILE"
+        return 0
+    else
+        echo "❌ Build gagal, server tetap berjalan"
+        touch "$REF_FILE"
+        return 1
+    fi
+}
+
+start_server() {
+    if [ -n "$SERVER_PID" ] && kill -0 "$SERVER_PID" 2>/dev/null; then
+        kill "$SERVER_PID" 2>/dev/null
+        wait "$SERVER_PID" 2>/dev/null
+    fi
+    "$BINARY" &
+    SERVER_PID=$!
+    echo "🚀 Server berjalan (PID: $SERVER_PID)"
+}
+
+cleanup() {
+    echo "📝 Shutting down..."
+    [ -n "$SERVER_PID" ] && kill "$SERVER_PID" 2>/dev/null
+    exit 0
+}
+
+trap cleanup SIGINT SIGTERM
+
+# Inisialisasi reference file
+touch "$REF_FILE"
+
+# Build dan jalankan pertama kali
+if build; then
+    start_server
+else
+    echo "❌ Build awal gagal, keluar"
+    exit 1
+fi
+
+echo "👀 Memantau perubahan file .go..."
+
+# Loop pantau perubahan
+while true; do
+    sleep 2
+    CHANGED=$(find . -maxdepth 1 \( -name "*.go" -o -name "go.mod" \) -newer "$REF_FILE" 2>/dev/null | head -1)
+    if [ -n "$CHANGED" ]; then
+        echo ""
+        echo "📝 Perubahan terdeteksi: $(basename "$CHANGED")"
+        if build; then
+            echo "🔄 Restart server..."
+            start_server
+        fi
+    fi
+done
