@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CloddsBot Trading Terminal</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0d1117; color: #e6edf3; font-family: 'Courier New', monospace; }
+    header { background: #161b22; border-bottom: 1px solid #30363d; padding: 12px 24px; display: flex; align-items: center; gap: 12px; }
+    header h1 { font-size: 1.2rem; color: #58a6ff; }
+    .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #3fb950; display: inline-block; }
+    .container { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 16px; }
+    .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 16px; }
+    .card h2 { font-size: 0.9rem; color: #8b949e; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; }
+    .stat-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #21262d; font-size: 0.85rem; }
+    .stat-row:last-child { border-bottom: none; }
+    .stat-val { color: #58a6ff; font-weight: bold; }
+    .positive { color: #3fb950; }
+    .negative { color: #f85149; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    th { color: #8b949e; text-align: left; padding: 6px 8px; border-bottom: 1px solid #30363d; font-weight: normal; }
+    td { padding: 8px; border-bottom: 1px solid #21262d; }
+    tr:last-child td { border-bottom: none; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; }
+    .badge-yes { background: #1a4731; color: #3fb950; }
+    .badge-no { background: #3d1a1a; color: #f85149; }
+    .badge-buy { background: #1a4731; color: #3fb950; }
+    .badge-sell { background: #3d1a1a; color: #f85149; }
+    input, select { background: #0d1117; border: 1px solid #30363d; color: #e6edf3; padding: 8px 10px; border-radius: 6px; font-family: inherit; font-size: 0.85rem; width: 100%; margin-bottom: 8px; }
+    button { background: #238636; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-family: inherit; width: 100%; }
+    button:hover { background: #2ea043; }
+    .full-width { grid-column: 1 / -1; }
+    .market-item { padding: 10px; border-bottom: 1px solid #21262d; font-size: 0.82rem; }
+    .market-item:last-child { border-bottom: none; }
+    .market-q { color: #e6edf3; margin-bottom: 4px; }
+    .market-meta { color: #8b949e; font-size: 0.75rem; }
+    .vol { color: #58a6ff; }
+    .empty { color: #8b949e; text-align: center; padding: 24px; font-size: 0.85rem; }
+    .search-row { display: flex; gap: 8px; margin-bottom: 12px; }
+    .search-row input { margin-bottom: 0; }
+    .search-row button { width: auto; padding: 8px 14px; }
+    #msg { color: #3fb950; font-size: 0.8rem; margin-top: 6px; min-height: 18px; }
+  </style>
+</head>
+<body>
+<header>
+  <span class="status-dot" id="statusDot"></span>
+  <h1>CloddsBot Trading Terminal</h1>
+  <span id="statusText" style="color:#8b949e;font-size:0.8rem;">Connecting...</span>
+</header>
+
+<div class="container">
+  <!-- Portfolio Summary -->
+  <div class="card">
+    <h2>Portfolio</h2>
+    <div class="stat-row"><span>Status</span><span class="stat-val" id="botStatus">--</span></div>
+    <div class="stat-row"><span>Open Positions</span><span class="stat-val" id="posCount">--</span></div>
+    <div class="stat-row"><span>Total Value</span><span class="stat-val" id="totalValue">--</span></div>
+    <div class="stat-row"><span>Unrealized P&L</span><span class="stat-val" id="unrealizedPnl">--</span></div>
+    <div class="stat-row"><span>Daily Trades</span><span class="stat-val" id="dailyTrades">--</span></div>
+    <div class="stat-row"><span>Daily P&L</span><span class="stat-val" id="dailyPnl">--</span></div>
+  </div>
+
+  <!-- Place Trade -->
+  <div class="card">
+    <h2>Place Trade</h2>
+    <input type="text" id="tradeMarket" placeholder="Market (e.g. trump-2028)" />
+    <select id="tradeSide">
+      <option value="YES">YES (Long)</option>
+      <option value="NO">NO (Short)</option>
+    </select>
+    <input type="number" id="tradeSize" placeholder="Size ($)" min="1" />
+    <input type="number" id="tradeStopLoss" placeholder="Stop Loss price (optional)" step="0.01" />
+    <input type="number" id="tradeTakeProfit" placeholder="Take Profit price (optional)" step="0.01" />
+    <button onclick="placeTrade()">Execute Order</button>
+    <div id="msg"></div>
+  </div>
+
+  <!-- Open Positions -->
+  <div class="card full-width">
+    <h2>Open Positions</h2>
+    <div id="positionsTable"><div class="empty">No open positions</div></div>
+  </div>
+
+  <!-- Market Search -->
+  <div class="card full-width">
+    <h2>Market Search</h2>
+    <div class="search-row">
+      <input type="text" id="searchQuery" placeholder="Search markets..." />
+      <select id="searchCategory" style="width:auto;margin-bottom:0;">
+        <option value="">All Categories</option>
+        <option value="politics">Politics</option>
+        <option value="crypto">Crypto</option>
+        <option value="finance">Finance</option>
+        <option value="sports">Sports</option>
+      </select>
+      <button onclick="searchMarkets()">Search</button>
+    </div>
+    <div id="marketResults"><div class="empty">Search to discover markets</div></div>
+  </div>
+
+  <!-- Trending Markets -->
+  <div class="card full-width">
+    <h2>Trending Markets</h2>
+    <div id="trendingMarkets"><div class="empty">Loading...</div></div>
+  </div>
+</div>
+
+<script>
+  async function fetchStatus() {
+    try {
+      const res = await fetch('/api/status');
+      const data = await res.json();
+      document.getElementById('statusDot').style.background = data.status === 'running' ? '#3fb950' : '#f85149';
+      document.getElementById('statusText').textContent = data.status === 'running' ? 'Running' : 'Stopped';
+      document.getElementById('botStatus').textContent = data.isActive ? 'Active' : 'Inactive';
+      document.getElementById('posCount').textContent = data.positions?.count ?? 0;
+      document.getElementById('totalValue').textContent = '$' + (data.positions?.totalValue || 0).toFixed(2);
+      const pnl = data.positions?.unrealizedPnl || 0;
+      const pnlEl = document.getElementById('unrealizedPnl');
+      pnlEl.textContent = (pnl >= 0 ? '+' : '') + '$' + pnl.toFixed(2);
+      pnlEl.className = 'stat-val ' + (pnl >= 0 ? 'positive' : 'negative');
+      document.getElementById('dailyTrades').textContent = data.dailyTrades ?? 0;
+      const dpnl = data.dailyPnL || 0;
+      const dpnlEl = document.getElementById('dailyPnl');
+      dpnlEl.textContent = (dpnl >= 0 ? '+' : '') + '$' + dpnl.toFixed(2);
+      dpnlEl.className = 'stat-val ' + (dpnl >= 0 ? 'positive' : 'negative');
+    } catch(e) {
+      document.getElementById('statusText').textContent = 'Offline';
+      document.getElementById('statusDot').style.background = '#f85149';
+    }
+  }
+
+  async function fetchPositions() {
+    try {
+      const res = await fetch('/api/positions');
+      const positions = await res.json();
+      const el = document.getElementById('positionsTable');
+      if (!positions.length) { el.innerHTML = '<div class="empty">No open positions</div>'; return; }
+      el.innerHTML = `<table>
+        <thead><tr><th>ID</th><th>Platform</th><th>Market</th><th>Side</th><th>Size</th><th>Entry</th><th>Current</th><th>Stop Loss</th><th>Take Profit</th><th>Action</th></tr></thead>
+        <tbody>${positions.map(p => `
+          <tr>
+            <td style="color:#8b949e;font-size:0.75rem">${p.id.slice(-8)}</td>
+            <td>${p.platform}</td>
+            <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.market}</td>
+            <td><span class="badge badge-${p.side.toLowerCase()}">${p.side}</span></td>
+            <td>$${p.size}</td>
+            <td>$${p.entryPrice?.toFixed(3)}</td>
+            <td>$${p.currentPrice?.toFixed(3)}</td>
+            <td>${p.stopLoss ? '$'+p.stopLoss.price?.toFixed(3) : '-'}</td>
+            <td>${p.takeProfit ? '$'+p.takeProfit.price?.toFixed(3) : '-'}</td>
+            <td><button onclick="closePos('${p.id}')" style="background:#b91c1c;width:auto;padding:4px 10px;">Close</button></td>
+          </tr>`).join('')}
+        </tbody></table>`;
+    } catch(e) {}
+  }
+
+  async function closePos(id) {
+    if (!confirm('Close this position?')) return;
+    const res = await fetch('/api/close', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ positionId: id }) });
+    const data = await res.json();
+    if (data.success) { fetchPositions(); fetchStatus(); }
+  }
+
+  async function placeTrade() {
+    const market = document.getElementById('tradeMarket').value.trim();
+    const side = document.getElementById('tradeSide').value;
+    const size = document.getElementById('tradeSize').value;
+    const stopLoss = document.getElementById('tradeStopLoss').value;
+    const takeProfit = document.getElementById('tradeTakeProfit').value;
+    const msgEl = document.getElementById('msg');
+    if (!market || !size) { msgEl.style.color='#f85149'; msgEl.textContent = 'Market and size are required.'; return; }
+    msgEl.style.color='#8b949e'; msgEl.textContent = 'Executing...';
+    try {
+      const res = await fetch('/api/trade', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ market, side, size, stopLoss: stopLoss || null, takeProfit: takeProfit || null }) });
+      const data = await res.json();
+      if (data.success) {
+        msgEl.style.color='#3fb950'; msgEl.textContent = `Order placed on ${data.platform} @ $${data.entryPrice?.toFixed(3)}`;
+        document.getElementById('tradeMarket').value = '';
+        document.getElementById('tradeSize').value = '';
+        document.getElementById('tradeStopLoss').value = '';
+        document.getElementById('tradeTakeProfit').value = '';
+        fetchPositions(); fetchStatus();
+      } else {
+        msgEl.style.color='#f85149'; msgEl.textContent = data.error || 'Trade failed';
+      }
+    } catch(e) { msgEl.style.color='#f85149'; msgEl.textContent = 'Network error'; }
+  }
+
+  async function searchMarkets() {
+    const q = document.getElementById('searchQuery').value;
+    const category = document.getElementById('searchCategory').value;
+    const params = new URLSearchParams();
+    if (q) params.set('q', q);
+    if (category) params.set('category', category);
+    const res = await fetch('/api/markets/search?' + params);
+    const markets = await res.json();
+    renderMarkets('marketResults', markets, 'No markets found');
+  }
+
+  async function fetchTrending() {
+    try {
+      const res = await fetch('/api/markets/trending');
+      const markets = await res.json();
+      renderMarkets('trendingMarkets', markets, 'No trending markets');
+    } catch(e) {}
+  }
+
+  function renderMarkets(elId, markets, emptyMsg) {
+    const el = document.getElementById(elId);
+    if (!markets.length) { el.innerHTML = `<div class="empty">${emptyMsg}</div>`; return; }
+    el.innerHTML = markets.map(m => `
+      <div class="market-item">
+        <div class="market-q">${m.question}</div>
+        <div class="market-meta">
+          <span style="color:#58a6ff">${m.platform}</span> &bull;
+          ${m.category} &bull;
+          Vol: <span class="vol">$${(m.volume/1000).toFixed(0)}K</span> &bull;
+          Ends: ${m.endDate}
+          ${m.volumeChange !== undefined ? ` &bull; <span class="${m.volumeChange>=0?'positive':'negative'}">${m.volumeChange>=0?'+':''}${m.volumeChange}%</span>` : ''}
+        </div>
+      </div>`).join('');
+  }
+
+  function init() {
+    fetchStatus();
+    fetchPositions();
+    fetchTrending();
+    setInterval(fetchStatus, 10000);
+    setInterval(fetchPositions, 10000);
+  }
+
+  init();
+</script>
+</body>
+</html>
