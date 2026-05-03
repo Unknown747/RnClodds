@@ -2,76 +2,67 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
 	"syscall"
+	"time"
 )
 
 func main() {
-	fmt.Println("============================================================")
-	fmt.Println("🤖 CloddsBot Trading Terminal (Go)")
-	fmt.Println("============================================================")
-	fmt.Println("Supported platforms: Polymarket, Kalshi, Manifold, Hyperliquid, Binance, Jupiter")
-	fmt.Println("Trading features: Stop-loss, Take-profit, Trailing stop, Smart routing")
-	fmt.Println("============================================================")
+	setupLogger()
+
+	slog.Info("CloddsBot Trading Terminal (Go) starting up")
+	slog.Info("Supported platforms: Polymarket, Kalshi, Manifold, Hyperliquid, Binance, Jupiter")
+	slog.Info("Trading features: Stop-loss, Take-profit, Trailing stop, Smart routing")
 
 	cfg := LoadConfig()
 
 	mem, err := NewMemoryManager(cfg.DBPath)
 	if err != nil {
-		log.Fatalf("Failed to init memory manager: %v", err)
+		slog.Error("Failed to init memory manager", "error", err)
+		os.Exit(1)
 	}
 
 	bot := NewTradingBot(cfg, mem)
 	bot.Start()
 
 	mux := http.NewServeMux()
-
 	mux.Handle("/", http.FileServer(http.Dir("public")))
 
 	mux.HandleFunc("/api/status", func(w http.ResponseWriter, r *http.Request) {
 		summary, err := bot.GetPortfolioSummary()
 		if err != nil {
+			slog.Error("Failed to get portfolio summary", "error", err)
 			jsonError(w, err.Error(), 500)
 			return
 		}
-		resp := map[string]interface{}{
-			"status":   "running",
-			"positions": summary.Positions,
+		jsonOK(w, map[string]interface{}{
+			"status":      "running",
+			"positions":   summary.Positions,
 			"dailyTrades": summary.DailyTrades,
 			"dailyPnL":    summary.DailyPnL,
 			"preferences": summary.Preferences,
 			"rules":       summary.Rules,
 			"isActive":    summary.IsActive,
-		}
-		jsonOK(w, resp)
+		})
 	})
 
 	mux.HandleFunc("/api/positions", func(w http.ResponseWriter, r *http.Request) {
-		positions := bot.GetOpenPositions()
-		jsonOK(w, positions)
+		jsonOK(w, bot.GetOpenPositions())
 	})
 
 	mux.HandleFunc("/api/markets/trending", func(w http.ResponseWriter, r *http.Request) {
-		trending := bot.GetTrendingMarkets()
-		jsonOK(w, trending)
+		jsonOK(w, bot.GetTrendingMarkets())
 	})
 
 	mux.HandleFunc("/api/markets/search", func(w http.ResponseWriter, r *http.Request) {
 		q := r.URL.Query().Get("q")
 		category := r.URL.Query().Get("category")
-		minVolStr := r.URL.Query().Get("minVolume")
-		minVol, _ := strconv.ParseFloat(minVolStr, 64)
-
-		filters := MarketFilters{
-			Category:  category,
-			MinVolume: minVol,
-		}
-		results := bot.SearchMarkets(q, filters)
+		minVol, _ := strconv.ParseFloat(r.URL.Query().Get("minVolume"), 64)
+		results := bot.SearchMarkets(q, MarketFilters{Category: category, MinVolume: minVol})
 		jsonOK(w, results)
 	})
 
@@ -99,10 +90,11 @@ func main() {
 			TakeProfit: body.TakeProfit,
 		})
 		if err != nil {
+			slog.Warn("Trade execution failed", "market", body.Market, "error", err)
 			jsonError(w, err.Error(), 400)
 			return
 		}
-		resp := map[string]interface{}{
+		jsonOK(w, map[string]interface{}{
 			"success":    true,
 			"orderId":    result.OrderID,
 			"platform":   result.Platform,
@@ -110,8 +102,7 @@ func main() {
 			"size":       result.Size,
 			"route":      result.Route,
 			"position":   result.Position,
-		}
-		jsonOK(w, resp)
+		})
 	})
 
 	mux.HandleFunc("/api/close", func(w http.ResponseWriter, r *http.Request) {
@@ -127,6 +118,7 @@ func main() {
 			return
 		}
 		if err := bot.ClosePosition(body.PositionID); err != nil {
+			slog.Warn("Close position failed", "positionId", body.PositionID, "error", err)
 			jsonError(w, err.Error(), 400)
 			return
 		}
@@ -147,6 +139,7 @@ func main() {
 			return
 		}
 		if err := bot.SetPreference(body.Key, body.Value); err != nil {
+			slog.Error("Set preference failed", "key", body.Key, "error", err)
 			jsonError(w, err.Error(), 500)
 			return
 		}
@@ -166,6 +159,7 @@ func main() {
 			return
 		}
 		if err := bot.AddRule(body.Rule); err != nil {
+			slog.Error("Add rule failed", "error", err)
 			jsonError(w, err.Error(), 500)
 			return
 		}
@@ -173,20 +167,12 @@ func main() {
 	})
 
 	addr := cfg.Server.Host + ":" + cfg.Server.Port
+	slog.Info("Server listening", "addr", "http://"+addr)
 
 	go func() {
-		fmt.Printf(`
-    ╔══════════════════════════════════════════════════════════╗
-    ║                                                          ║
-    ║   🤖 CloddsBot is running! (Go Edition)                  ║
-    ║                                                          ║
-    ║   Web interface: http://%s               ║
-    ║   API endpoint:  http://%s/api/status    ║
-    ║                                                          ║
-    ╚══════════════════════════════════════════════════════════╝
-`, addr, addr)
-		if err := http.ListenAndServe(addr, mux); err != nil {
-			log.Fatalf("Server error: %v", err)
+		if err := http.ListenAndServe(addr, requestLogger(mux)); err != nil {
+			slog.Error("Server error", "error", err)
+			os.Exit(1)
 		}
 	}()
 
@@ -194,8 +180,48 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	fmt.Println("\n📝 Shutting down...")
+	slog.Info("Shutting down...")
 	bot.Stop()
+}
+
+// setupLogger configures slog with time, level, and message.
+func setupLogger() {
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelInfo,
+		ReplaceAttr: func(_ []string, a slog.Attr) slog.Attr {
+			if a.Key == slog.TimeKey {
+				a.Value = slog.StringValue(a.Value.Time().Format("15:04:05"))
+			}
+			return a
+		},
+	})))
+}
+
+// requestLogger wraps a handler and logs every HTTP request.
+func requestLogger(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		rw := &responseWriter{ResponseWriter: w, status: 200}
+		next.ServeHTTP(rw, r)
+		if r.URL.Path != "/" {
+			slog.Info("HTTP",
+				"method", r.Method,
+				"path", r.URL.Path,
+				"status", rw.status,
+				"duration", time.Since(start).String(),
+			)
+		}
+	})
+}
+
+type responseWriter struct {
+	http.ResponseWriter
+	status int
+}
+
+func (rw *responseWriter) WriteHeader(code int) {
+	rw.status = code
+	rw.ResponseWriter.WriteHeader(code)
 }
 
 func jsonOK(w http.ResponseWriter, data interface{}) {

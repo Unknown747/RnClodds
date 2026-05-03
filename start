@@ -1,18 +1,40 @@
 #!/bin/bash
 # start - Build dan jalankan CloddsBot dengan auto-rebuild saat kode Go berubah
 
+# Warna ANSI
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+RESET='\033[0m'
+
 BINARY="./cloddsbot"
 REF_FILE="/tmp/.cloddsbot_ref"
 SERVER_PID=""
+WATCH_INTERVAL=2
+DEBOUNCE_DELAY=0.5
+
+log_info()    { echo -e "${GREEN}[$(date '+%H:%M:%S')] ✅ $*${RESET}"; }
+log_warn()    { echo -e "${YELLOW}[$(date '+%H:%M:%S')] ⚠️  $*${RESET}"; }
+log_error()   { echo -e "${RED}[$(date '+%H:%M:%S')] ❌ $*${RESET}"; }
+log_build()   { echo -e "${CYAN}[$(date '+%H:%M:%S')] 🔨 $*${RESET}"; }
+log_watch()   { echo -e "${BLUE}[$(date '+%H:%M:%S')] 👀 $*${RESET}"; }
+log_restart() { echo -e "${BOLD}[$(date '+%H:%M:%S')] 🔄 $*${RESET}"; }
 
 build() {
-    echo "🔨 Building..."
-    if go build -o "$BINARY" . 2>&1; then
-        echo "✅ Build berhasil"
+    log_build "Building cloddsbot..."
+    local start_time=$SECONDS
+    local output
+    if output=$(go build -o "$BINARY" . 2>&1); then
+        local elapsed=$((SECONDS - start_time))
+        log_info "Build berhasil dalam ${elapsed}s"
         touch "$REF_FILE"
         return 0
     else
-        echo "❌ Build gagal, server tetap berjalan"
+        log_error "Build gagal:"
+        echo "$output" | sed 's/^/    /'
         touch "$REF_FILE"
         return 1
     fi
@@ -20,45 +42,58 @@ build() {
 
 start_server() {
     if [ -n "$SERVER_PID" ] && kill -0 "$SERVER_PID" 2>/dev/null; then
-        kill "$SERVER_PID" 2>/dev/null
+        kill -TERM "$SERVER_PID" 2>/dev/null
         wait "$SERVER_PID" 2>/dev/null
     fi
     "$BINARY" &
     SERVER_PID=$!
-    echo "🚀 Server berjalan (PID: $SERVER_PID)"
+    log_info "Server berjalan (PID: $SERVER_PID)"
 }
 
 cleanup() {
-    echo "📝 Shutting down..."
-    [ -n "$SERVER_PID" ] && kill "$SERVER_PID" 2>/dev/null
+    echo ""
+    log_warn "Shutting down..."
+    [ -n "$SERVER_PID" ] && kill -TERM "$SERVER_PID" 2>/dev/null
+    wait "$SERVER_PID" 2>/dev/null
     exit 0
 }
 
 trap cleanup SIGINT SIGTERM
 
-# Inisialisasi reference file
+# Inisialisasi
 touch "$REF_FILE"
 
 # Build dan jalankan pertama kali
 if build; then
     start_server
 else
-    echo "❌ Build awal gagal, keluar"
+    log_error "Build awal gagal, keluar"
     exit 1
 fi
 
-echo "👀 Memantau perubahan file .go..."
+log_watch "Memantau perubahan .go / go.mod (interval: ${WATCH_INTERVAL}s, debounce: ${DEBOUNCE_DELAY}s)..."
 
 # Loop pantau perubahan
 while true; do
-    sleep 2
-    CHANGED=$(find . -maxdepth 1 \( -name "*.go" -o -name "go.mod" \) -newer "$REF_FILE" 2>/dev/null | head -1)
+    sleep "$WATCH_INTERVAL"
+
+    CHANGED=$(find . -maxdepth 1 \( -name "*.go" -o -name "go.mod" \) -newer "$REF_FILE" 2>/dev/null)
+
     if [ -n "$CHANGED" ]; then
+        # Debounce — tunggu sebentar agar file yang disimpan bersamaan terkumpul
+        sleep "$DEBOUNCE_DELAY"
+        CHANGED=$(find . -maxdepth 1 \( -name "*.go" -o -name "go.mod" \) -newer "$REF_FILE" 2>/dev/null)
+
+        FILE_COUNT=$(echo "$CHANGED" | grep -c .)
+        FILES=$(echo "$CHANGED" | xargs -I{} basename {} | tr '\n' ' ')
+
         echo ""
-        echo "📝 Perubahan terdeteksi: $(basename "$CHANGED")"
+        log_restart "Perubahan terdeteksi ($FILE_COUNT file): ${FILES}"
+
         if build; then
-            echo "🔄 Restart server..."
             start_server
+        else
+            log_warn "Build gagal — server lama tetap berjalan (PID: $SERVER_PID)"
         fi
     fi
 done

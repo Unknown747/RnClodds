@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	"math/rand"
 	"sync"
 	"time"
@@ -63,21 +64,21 @@ type PositionEvent struct {
 }
 
 type PositionSummary struct {
-	Count             int     `json:"count"`
-	TotalValue        float64 `json:"totalValue"`
-	UnrealizedPnl     float64 `json:"unrealizedPnl"`
-	WithStopLoss      int     `json:"withStopLoss"`
-	WithTakeProfit    int     `json:"withTakeProfit"`
-	WithTrailingStop  int     `json:"withTrailingStop"`
+	Count            int     `json:"count"`
+	TotalValue       float64 `json:"totalValue"`
+	UnrealizedPnl    float64 `json:"unrealizedPnl"`
+	WithStopLoss     int     `json:"withStopLoss"`
+	WithTakeProfit   int     `json:"withTakeProfit"`
+	WithTrailingStop int     `json:"withTrailingStop"`
 }
 
 type PositionManager struct {
-	mu             sync.RWMutex
-	positions      map[string]*Position
-	checkInterval  time.Duration
-	ticker         *time.Ticker
-	done           chan struct{}
-	EventHandlers  map[string][]func(PositionEvent)
+	mu            sync.RWMutex
+	positions     map[string]*Position
+	checkInterval time.Duration
+	ticker        *time.Ticker
+	done          chan struct{}
+	EventHandlers map[string][]func(PositionEvent)
 }
 
 func NewPositionManager(checkIntervalMs int) *PositionManager {
@@ -114,7 +115,7 @@ func (pm *PositionManager) Start() {
 			}
 		}
 	}()
-	fmt.Println("Position manager started")
+	slog.Info("Position manager started", "checkInterval", pm.checkInterval)
 }
 
 func (pm *PositionManager) Stop() {
@@ -122,6 +123,7 @@ func (pm *PositionManager) Stop() {
 		pm.ticker.Stop()
 	}
 	close(pm.done)
+	slog.Info("Position manager stopped")
 }
 
 func (pm *PositionManager) AddPosition(platform, market, side string, size, entryPrice float64) *Position {
@@ -142,6 +144,14 @@ func (pm *PositionManager) AddPosition(platform, market, side string, size, entr
 	pm.positions[pos.ID] = pos
 	pm.mu.Unlock()
 
+	slog.Info("Position added",
+		"id", pos.ID,
+		"platform", platform,
+		"market", market,
+		"side", side,
+		"size", size,
+		"entryPrice", entryPrice,
+	)
 	pm.emit("positionAdded", PositionEvent{Type: "positionAdded", Position: *pos})
 	return pos
 }
@@ -207,6 +217,7 @@ func (pm *PositionManager) SetStopLoss(positionID string, price, percentFromEntr
 	}
 
 	pos.StopLoss = &StopLoss{Price: stopPrice, SizePercent: sizePercent, SetAt: time.Now()}
+	slog.Info("Stop loss set", "positionId", positionID, "price", stopPrice, "sizePercent", sizePercent)
 	return nil
 }
 
@@ -232,6 +243,7 @@ func (pm *PositionManager) SetTakeProfit(positionID string, price, percentFromEn
 		}
 		pos.TakeProfit = &TakeProfit{Type: "single", Price: targetPrice, SizePercent: 100, SetAt: time.Now()}
 	}
+	slog.Info("Take profit set", "positionId", positionID)
 	return nil
 }
 
@@ -250,6 +262,7 @@ func (pm *PositionManager) SetTrailingStop(positionID string, trailPercent, acti
 		IsActive:     activateAt == 0,
 		SetAt:        time.Now(),
 	}
+	slog.Info("Trailing stop set", "positionId", positionID, "trailPercent", trailPercent)
 	return nil
 }
 
@@ -264,6 +277,7 @@ func (pm *PositionManager) RemoveAllStops(positionID string) error {
 	pos.StopLoss = nil
 	pos.TakeProfit = nil
 	pos.TrailingStop = nil
+	slog.Info("All stops removed", "positionId", positionID)
 	return nil
 }
 
@@ -271,6 +285,7 @@ func (pm *PositionManager) DeletePosition(positionID string) {
 	pm.mu.Lock()
 	delete(pm.positions, positionID)
 	pm.mu.Unlock()
+	slog.Info("Position deleted", "positionId", positionID)
 }
 
 func (pm *PositionManager) GetSummary() PositionSummary {
@@ -330,11 +345,7 @@ func (pm *PositionManager) checkStopLoss(pos *Position) {
 
 	if shouldTrigger {
 		pnl := pm.calculatePnL(pos)
-		pm.emit("stopLossTriggered", PositionEvent{
-			Type:     "stopLossTriggered",
-			Position: *pos,
-			PnL:      &pnl,
-		})
+		pm.emit("stopLossTriggered", PositionEvent{Type: "stopLossTriggered", Position: *pos, PnL: &pnl})
 		if pos.StopLoss.SizePercent >= 100 {
 			pm.mu.Lock()
 			delete(pm.positions, pos.ID)
@@ -408,6 +419,7 @@ func (pm *PositionManager) checkTrailingStop(pos *Position) {
 				p.HighWaterMark = pos.CurrentPrice
 			}
 			pm.mu.Unlock()
+			slog.Info("Trailing stop activated", "positionId", pos.ID)
 		} else {
 			return
 		}

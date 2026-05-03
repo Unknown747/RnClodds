@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	"time"
 )
 
@@ -37,18 +38,17 @@ type OrderResult struct {
 }
 
 type PortfolioSummary struct {
-	Positions   PositionSummary    `json:"positions"`
-	DailyTrades int                `json:"dailyTrades"`
-	DailyPnL    float64            `json:"dailyPnL"`
-	Preferences map[string]string  `json:"preferences"`
-	Rules       []Memory           `json:"rules"`
-	IsActive    bool               `json:"isActive"`
+	Positions   PositionSummary   `json:"positions"`
+	DailyTrades int               `json:"dailyTrades"`
+	DailyPnL    float64           `json:"dailyPnL"`
+	Preferences map[string]string `json:"preferences"`
+	Rules       []Memory          `json:"rules"`
+	IsActive    bool              `json:"isActive"`
 }
 
 func NewTradingBot(cfg *Config, mem *MemoryManager) *TradingBot {
 	platforms := cfg.Platforms.PredictionMarkets
-
-	bot := &TradingBot{
+	return &TradingBot{
 		config:      cfg,
 		memory:      mem,
 		positions:   NewPositionManager(5000),
@@ -57,42 +57,53 @@ func NewTradingBot(cfg *Config, mem *MemoryManager) *TradingBot {
 		userID:      "cli-user",
 		tradingMode: "balanced",
 	}
-	return bot
 }
 
 func (b *TradingBot) Start() {
-	fmt.Println("🚀 Starting Trading Bot...")
+	slog.Info("Starting Trading Bot")
 	b.positions.Start()
 	b.setupEventHandlers()
 	b.isActive = true
 	b.startedAt = time.Now()
-	fmt.Println("✅ Trading bot is active")
+	slog.Info("Trading bot is active", "mode", b.tradingMode, "userId", b.userID)
 }
 
 func (b *TradingBot) setupEventHandlers() {
 	b.positions.On("stopLossTriggered", func(e PositionEvent) {
-		fmt.Printf("🛑 STOP LOSS TRIGGERED: %s @ %.3f\n", e.Position.Market, e.Position.CurrentPrice)
-		if e.PnL != nil {
-			b.memory.LogDaily(b.userID, time.Now(), 1, e.PnL.PnL,
-				fmt.Sprintf("Stop loss triggered on %s", e.Position.Market))
-		}
+		slog.Warn("Stop loss triggered",
+			"market", e.Position.Market,
+			"price", e.Position.CurrentPrice,
+			"pnl", e.PnL.PnL,
+		)
+		b.memory.LogDaily(b.userID, time.Now(), 1, e.PnL.PnL,
+			fmt.Sprintf("Stop loss triggered on %s", e.Position.Market))
 	})
 
 	b.positions.On("takeProfitTriggered", func(e PositionEvent) {
-		fmt.Printf("✅ TAKE PROFIT TRIGGERED: %s @ %.3f\n", e.Position.Market, e.Position.CurrentPrice)
-		if e.PnL != nil {
-			b.memory.LogDaily(b.userID, time.Now(), 1, e.PnL.PnL,
-				fmt.Sprintf("Take profit triggered on %s", e.Position.Market))
-		}
+		slog.Info("Take profit triggered",
+			"market", e.Position.Market,
+			"price", e.Position.CurrentPrice,
+			"pnl", e.PnL.PnL,
+		)
+		b.memory.LogDaily(b.userID, time.Now(), 1, e.PnL.PnL,
+			fmt.Sprintf("Take profit triggered on %s", e.Position.Market))
 	})
 
 	b.positions.On("trailingStopTriggered", func(e PositionEvent) {
-		fmt.Printf("📉 TRAILING STOP TRIGGERED: %s @ %.3f\n", e.Position.Market, e.Position.CurrentPrice)
+		slog.Warn("Trailing stop triggered",
+			"market", e.Position.Market,
+			"price", e.Position.CurrentPrice,
+			"highWaterMark", e.Position.HighWaterMark,
+		)
 	})
 }
 
 func (b *TradingBot) ExecuteOrder(params OrderParams) (*OrderResult, error) {
-	fmt.Printf("📊 Executing order: %s %s for $%.2f\n", params.Side, params.Market, params.Size)
+	slog.Info("Executing order",
+		"side", params.Side,
+		"market", params.Market,
+		"size", params.Size,
+	)
 
 	if err := b.checkTradingLimits(); err != nil {
 		return nil, err
@@ -103,7 +114,11 @@ func (b *TradingBot) ExecuteOrder(params OrderParams) (*OrderResult, error) {
 		return nil, fmt.Errorf("routing error: %w", err)
 	}
 
-	fmt.Printf("🏆 Best route: %s @ $%.3f\n", route.Platform, route.ExpectedPrice)
+	slog.Info("Best route selected",
+		"platform", route.Platform,
+		"expectedPrice", route.ExpectedPrice,
+		"fees", route.Fees,
+	)
 
 	marketData := b.marketIndex.GetMarket(route.Platform, params.Market)
 	entryPrice := route.ExpectedPrice
@@ -115,9 +130,11 @@ func (b *TradingBot) ExecuteOrder(params OrderParams) (*OrderResult, error) {
 
 	if params.StopLoss != nil {
 		b.positions.SetStopLoss(position.ID, *params.StopLoss, 0, 100)
+		slog.Info("Stop loss set", "positionId", position.ID, "price", *params.StopLoss)
 	}
 	if params.TakeProfit != nil {
 		b.positions.SetTakeProfit(position.ID, *params.TakeProfit, 0, nil)
+		slog.Info("Take profit set", "positionId", position.ID, "price", *params.TakeProfit)
 	}
 
 	b.dailyTrades++
@@ -155,36 +172,27 @@ func (b *TradingBot) ClosePosition(positionID string) error {
 		return fmt.Errorf("position %s not found", positionID)
 	}
 
-	fmt.Printf("Closing position %s at current price\n", positionID)
+	slog.Info("Closing position", "positionId", positionID, "market", pos.Market)
 
 	b.positions.RemoveAllStops(positionID)
 	b.positions.DeletePosition(positionID)
 
 	b.memory.Remember(b.userID, "note", fmt.Sprintf("close_%s", positionID),
-		fmt.Sprintf("Closed position %s", pos.Market),
-		nil,
-	)
+		fmt.Sprintf("Closed position %s", pos.Market), nil)
 	return nil
 }
 
 func (b *TradingBot) GetPortfolioSummary() (*PortfolioSummary, error) {
-	positionsSummary := b.positions.GetSummary()
-
 	prefs, err := b.memory.GetPreferences(b.userID)
 	if err != nil {
 		prefs = map[string]string{}
 	}
-
 	rules, err := b.memory.GetRules(b.userID)
-	if err != nil {
+	if err != nil || rules == nil {
 		rules = []Memory{}
 	}
-	if rules == nil {
-		rules = []Memory{}
-	}
-
 	return &PortfolioSummary{
-		Positions:   positionsSummary,
+		Positions:   b.positions.GetSummary(),
 		DailyTrades: b.dailyTrades,
 		DailyPnL:    b.dailyPnL,
 		Preferences: prefs,
@@ -194,18 +202,18 @@ func (b *TradingBot) GetPortfolioSummary() (*PortfolioSummary, error) {
 }
 
 func (b *TradingBot) SetPreference(key, value string) error {
+	slog.Info("Setting preference", "key", key)
 	return b.memory.Remember(b.userID, "preference", key, value, nil)
 }
 
 func (b *TradingBot) AddRule(rule string) error {
+	slog.Info("Adding trading rule", "rule", rule)
 	return b.memory.Remember(b.userID, "rule", "", rule,
-		map[string]interface{}{"addedAt": time.Now().Format(time.RFC3339)},
-	)
+		map[string]interface{}{"addedAt": time.Now().Format(time.RFC3339)})
 }
 
 func (b *TradingBot) checkTradingLimits() error {
 	summary := b.positions.GetSummary()
-
 	if summary.Count >= b.config.Risk.MaxPositions {
 		return fmt.Errorf("max positions (%d) reached", b.config.Risk.MaxPositions)
 	}
@@ -220,9 +228,9 @@ func (b *TradingBot) UpdateDailyPnL(pnl float64) {
 }
 
 func (b *TradingBot) Stop() {
-	fmt.Println("🛑 Stopping trading bot...")
+	slog.Info("Stopping trading bot")
 	b.positions.Stop()
 	b.memory.Close()
 	b.isActive = false
-	fmt.Println("✅ Trading bot stopped")
+	slog.Info("Trading bot stopped")
 }
