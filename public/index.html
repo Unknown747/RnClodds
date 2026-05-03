@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Clodds Trading Bot</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div id="app">
+    <header>
+      <div class="header-left">
+        <div class="logo">
+          <span class="logo-icon">⚡</span>
+          <span class="logo-text">Clodds</span>
+          <span class="logo-sub">Trading Bot</span>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="status-indicator" id="ws-status">
+          <span class="dot disconnected"></span>
+          <span class="status-text">Disconnected</span>
+        </div>
+        <button id="bot-toggle" class="btn btn-start">Start Bot</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Total PnL</div>
+          <div class="stat-value" id="total-pnl">$0.00</div>
+          <div class="stat-sub" id="daily-pnl">Today: $0.00</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Win Rate</div>
+          <div class="stat-value" id="win-rate">0%</div>
+          <div class="stat-sub" id="closed-trades">0 closed trades</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Open Trades</div>
+          <div class="stat-value" id="open-trades">0</div>
+          <div class="stat-sub" id="total-trades">0 total</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Bot Status</div>
+          <div class="stat-value status-stopped" id="bot-status-label">Stopped</div>
+          <div class="stat-sub">Auto-trading engine</div>
+        </div>
+      </section>
+
+      <section class="markets-section">
+        <h2>Live Markets</h2>
+        <div class="markets-grid" id="markets-grid">
+          <div class="market-card" data-market="BTC-USD">
+            <div class="market-name">BTC/USD</div>
+            <div class="market-price" id="price-BTC-USD">$0.00</div>
+            <div class="market-change" id="change-BTC-USD">--</div>
+          </div>
+          <div class="market-card" data-market="ETH-USD">
+            <div class="market-name">ETH/USD</div>
+            <div class="market-price" id="price-ETH-USD">$0.00</div>
+            <div class="market-change" id="change-ETH-USD">--</div>
+          </div>
+          <div class="market-card" data-market="SOL-USD">
+            <div class="market-name">SOL/USD</div>
+            <div class="market-price" id="price-SOL-USD">$0.00</div>
+            <div class="market-change" id="change-SOL-USD">--</div>
+          </div>
+          <div class="market-card" data-market="DOGE-USD">
+            <div class="market-name">DOGE/USD</div>
+            <div class="market-price" id="price-DOGE-USD">$0.0000</div>
+            <div class="market-change" id="change-DOGE-USD">--</div>
+          </div>
+        </div>
+      </section>
+
+      <div class="bottom-grid">
+        <section class="trades-section">
+          <div class="section-header">
+            <h2>Recent Trades</h2>
+            <div class="tab-group">
+              <button class="tab active" data-tab="all">All</button>
+              <button class="tab" data-tab="open">Open</button>
+              <button class="tab" data-tab="closed">Closed</button>
+            </div>
+          </div>
+          <div class="trades-table-wrap">
+            <table class="trades-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Market</th>
+                  <th>Side</th>
+                  <th>Size</th>
+                  <th>Entry</th>
+                  <th>Exit</th>
+                  <th>PnL</th>
+                  <th>Strategy</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="trades-body">
+                <tr><td colspan="9" class="empty-row">No trades yet. Start the bot to begin trading.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="logs-section">
+          <div class="section-header">
+            <h2>Bot Logs</h2>
+            <button class="btn btn-sm" id="clear-logs">Clear</button>
+          </div>
+          <div class="logs-container" id="logs-container">
+            <div class="log-entry info">System ready. Start the bot to begin.</div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
