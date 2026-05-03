@@ -22,6 +22,7 @@ type Config struct {
                 DefaultPositionSize int
                 MaxPositionSize     int
                 MaxDailyLoss        int
+                MaxDailyTrades      int
                 MaxLeverage         int
         }
         Risk struct {
@@ -55,6 +56,7 @@ func LoadConfig() *Config {
         c.Trading.DefaultPositionSize = envInt("DEFAULT_POSITION_SIZE", 100)
         c.Trading.MaxPositionSize = envInt("MAX_POSITION_SIZE", 1000)
         c.Trading.MaxDailyLoss = envInt("MAX_DAILY_LOSS", 500)
+        c.Trading.MaxDailyTrades = envInt("MAX_DAILY_TRADES", 20)
         c.Trading.MaxLeverage = 5
 
         c.Risk.MaxDrawdown = 20
