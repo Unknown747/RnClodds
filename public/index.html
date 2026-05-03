@@ -9,7 +9,12 @@
     body { background: #0d1117; color: #e6edf3; font-family: 'Courier New', monospace; }
     header { background: #161b22; border-bottom: 1px solid #30363d; padding: 12px 24px; display: flex; align-items: center; gap: 12px; }
     header h1 { font-size: 1.2rem; color: #58a6ff; }
+    nav { margin-left: auto; display: flex; gap: 8px; }
+    nav button { background: transparent; border: 1px solid #30363d; color: #8b949e; padding: 4px 14px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-family: inherit; }
+    nav button.active { background: #1f6feb; border-color: #1f6feb; color: #fff; }
     .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #3fb950; display: inline-block; }
+    .page { display: none; }
+    .page.active { display: block; }
     .container { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 16px; }
     .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 16px; }
     .card h2 { font-size: 0.9rem; color: #8b949e; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; }
@@ -25,8 +30,6 @@
     .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; }
     .badge-yes { background: #1a4731; color: #3fb950; }
     .badge-no { background: #3d1a1a; color: #f85149; }
-    .badge-buy { background: #1a4731; color: #3fb950; }
-    .badge-sell { background: #3d1a1a; color: #f85149; }
     input, select { background: #0d1117; border: 1px solid #30363d; color: #e6edf3; padding: 8px 10px; border-radius: 6px; font-family: inherit; font-size: 0.85rem; width: 100%; margin-bottom: 8px; }
     button { background: #238636; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-family: inherit; width: 100%; }
     button:hover { background: #2ea043; }
@@ -41,6 +44,24 @@
     .search-row input { margin-bottom: 0; }
     .search-row button { width: auto; padding: 8px 14px; }
     #msg { color: #3fb950; font-size: 0.8rem; margin-top: 6px; min-height: 18px; }
+
+    /* Analytics */
+    .metric-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+    .metric { background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 14px 16px; }
+    .metric-label { font-size: 0.72rem; color: #8b949e; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+    .metric-value { font-size: 1.4rem; font-weight: bold; color: #58a6ff; }
+    .metric-value.positive { color: #3fb950; }
+    .metric-value.negative { color: #f85149; }
+    .metric-value.neutral { color: #e6edf3; }
+    .platform-bar { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #21262d; font-size: 0.82rem; }
+    .platform-bar:last-child { border-bottom: none; }
+    .platform-name { width: 100px; color: #58a6ff; }
+    .bar-track { flex: 1; background: #21262d; border-radius: 4px; height: 6px; }
+    .bar-fill { background: #1f6feb; height: 6px; border-radius: 4px; transition: width 0.4s; }
+    .platform-count { width: 60px; text-align: right; color: #8b949e; }
+    .journal-row td:first-child { color: #58a6ff; font-size: 0.75rem; }
+    .winrate-ring { display: flex; justify-content: center; align-items: center; padding: 12px 0; }
+    svg.ring { transform: rotate(-90deg); }
   </style>
 </head>
 <body>
@@ -48,66 +69,155 @@
   <span class="status-dot" id="statusDot"></span>
   <h1>CloddsBot Trading Terminal</h1>
   <span id="statusText" style="color:#8b949e;font-size:0.8rem;">Connecting...</span>
+  <nav>
+    <button class="active" onclick="showPage('dashboard',this)">Dashboard</button>
+    <button onclick="showPage('analytics',this)">Analytics</button>
+    <button onclick="showPage('markets',this)">Markets</button>
+  </nav>
 </header>
 
-<div class="container">
-  <!-- Portfolio Summary -->
-  <div class="card">
-    <h2>Portfolio</h2>
-    <div class="stat-row"><span>Status</span><span class="stat-val" id="botStatus">--</span></div>
-    <div class="stat-row"><span>Open Positions</span><span class="stat-val" id="posCount">--</span></div>
-    <div class="stat-row"><span>Total Value</span><span class="stat-val" id="totalValue">--</span></div>
-    <div class="stat-row"><span>Unrealized P&L</span><span class="stat-val" id="unrealizedPnl">--</span></div>
-    <div class="stat-row"><span>Daily Trades</span><span class="stat-val" id="dailyTrades">--</span></div>
-    <div class="stat-row"><span>Daily P&L</span><span class="stat-val" id="dailyPnl">--</span></div>
-  </div>
-
-  <!-- Place Trade -->
-  <div class="card">
-    <h2>Place Trade</h2>
-    <input type="text" id="tradeMarket" placeholder="Market (e.g. trump-2028)" />
-    <select id="tradeSide">
-      <option value="YES">YES (Long)</option>
-      <option value="NO">NO (Short)</option>
-    </select>
-    <input type="number" id="tradeSize" placeholder="Size ($)" min="1" />
-    <input type="number" id="tradeStopLoss" placeholder="Stop Loss price (optional)" step="0.01" />
-    <input type="number" id="tradeTakeProfit" placeholder="Take Profit price (optional)" step="0.01" />
-    <button onclick="placeTrade()">Execute Order</button>
-    <div id="msg"></div>
-  </div>
-
-  <!-- Open Positions -->
-  <div class="card full-width">
-    <h2>Open Positions</h2>
-    <div id="positionsTable"><div class="empty">No open positions</div></div>
-  </div>
-
-  <!-- Market Search -->
-  <div class="card full-width">
-    <h2>Market Search</h2>
-    <div class="search-row">
-      <input type="text" id="searchQuery" placeholder="Search markets..." />
-      <select id="searchCategory" style="width:auto;margin-bottom:0;">
-        <option value="">All Categories</option>
-        <option value="politics">Politics</option>
-        <option value="crypto">Crypto</option>
-        <option value="finance">Finance</option>
-        <option value="sports">Sports</option>
-      </select>
-      <button onclick="searchMarkets()">Search</button>
+<!-- DASHBOARD PAGE -->
+<div id="page-dashboard" class="page active">
+  <div class="container">
+    <div class="card">
+      <h2>Portfolio</h2>
+      <div class="stat-row"><span>Status</span><span class="stat-val" id="botStatus">--</span></div>
+      <div class="stat-row"><span>Open Positions</span><span class="stat-val" id="posCount">--</span></div>
+      <div class="stat-row"><span>Total Value</span><span class="stat-val" id="totalValue">--</span></div>
+      <div class="stat-row"><span>Unrealized P&L</span><span class="stat-val" id="unrealizedPnl">--</span></div>
+      <div class="stat-row"><span>Daily Trades</span><span class="stat-val" id="dailyTrades">--</span></div>
+      <div class="stat-row"><span>Daily P&L</span><span class="stat-val" id="dailyPnl">--</span></div>
     </div>
-    <div id="marketResults"><div class="empty">Search to discover markets</div></div>
-  </div>
 
-  <!-- Trending Markets -->
-  <div class="card full-width">
-    <h2>Trending Markets</h2>
-    <div id="trendingMarkets"><div class="empty">Loading...</div></div>
+    <div class="card">
+      <h2>Place Trade</h2>
+      <input type="text" id="tradeMarket" placeholder="Market (e.g. trump-2028)" />
+      <select id="tradeSide">
+        <option value="YES">YES (Long)</option>
+        <option value="NO">NO (Short)</option>
+      </select>
+      <input type="number" id="tradeSize" placeholder="Size ($)" min="1" />
+      <input type="number" id="tradeStopLoss" placeholder="Stop Loss price (optional)" step="0.01" />
+      <input type="number" id="tradeTakeProfit" placeholder="Take Profit price (optional)" step="0.01" />
+      <button onclick="placeTrade()">Execute Order</button>
+      <div id="msg"></div>
+    </div>
+
+    <div class="card full-width">
+      <h2>Open Positions</h2>
+      <div id="positionsTable"><div class="empty">No open positions</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ANALYTICS PAGE -->
+<div id="page-analytics" class="page">
+  <div class="container">
+
+    <div class="card full-width">
+      <h2>Overall Performance</h2>
+      <div class="metric-grid">
+        <div class="metric">
+          <div class="metric-label">Total Trades</div>
+          <div class="metric-value neutral" id="aTotalTrades">--</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Total Closed</div>
+          <div class="metric-value neutral" id="aTotalClosed">--</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Total P&L</div>
+          <div class="metric-value" id="aTotalPnL">--</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Win Rate</div>
+          <div class="metric-value" id="aWinRate">--</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Avg P&L / Trade</div>
+          <div class="metric-value" id="aAvgPnL">--</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Best Trade</div>
+          <div class="metric-value positive" id="aBestTrade">--</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Worst Trade</div>
+          <div class="metric-value negative" id="aWorstTrade">--</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Today's Trades</div>
+          <div class="metric-value neutral" id="aDailyTrades">--</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Platform Breakdown</h2>
+      <div id="platformBreakdown"><div class="empty">No data yet</div></div>
+    </div>
+
+    <div class="card">
+      <h2>Win Rate</h2>
+      <div class="winrate-ring">
+        <svg class="ring" width="120" height="120" viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="50" fill="none" stroke="#21262d" stroke-width="12"/>
+          <circle id="winRateArc" cx="60" cy="60" r="50" fill="none" stroke="#3fb950" stroke-width="12"
+            stroke-dasharray="0 314" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div style="text-align:center;margin-top:-8px">
+        <div style="font-size:2rem;font-weight:bold;color:#3fb950" id="winRatePct">--</div>
+        <div style="font-size:0.75rem;color:#8b949e;margin-top:4px">Win Rate</div>
+      </div>
+    </div>
+
+    <div class="card full-width">
+      <h2>Recent Trading History</h2>
+      <div id="journalTable"><div class="empty">No trading history yet</div></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MARKETS PAGE -->
+<div id="page-markets" class="page">
+  <div class="container">
+    <div class="card full-width">
+      <h2>Market Search</h2>
+      <div class="search-row">
+        <input type="text" id="searchQuery" placeholder="Search markets..." />
+        <select id="searchCategory" style="width:auto;margin-bottom:0;">
+          <option value="">All Categories</option>
+          <option value="politics">Politics</option>
+          <option value="crypto">Crypto</option>
+          <option value="finance">Finance</option>
+          <option value="sports">Sports</option>
+        </select>
+        <button onclick="searchMarkets()">Search</button>
+      </div>
+      <div id="marketResults"><div class="empty">Search to discover markets</div></div>
+    </div>
+
+    <div class="card full-width">
+      <h2>Trending Markets</h2>
+      <div id="trendingMarkets"><div class="empty">Loading...</div></div>
+    </div>
   </div>
 </div>
 
 <script>
+  // --- Page navigation ---
+  function showPage(name, btn) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+    document.getElementById('page-' + name).classList.add('active');
+    btn.classList.add('active');
+    if (name === 'analytics') fetchAnalytics();
+    if (name === 'markets') fetchTrending();
+  }
+
+  // --- Status ---
   async function fetchStatus() {
     try {
       const res = await fetch('/api/status');
@@ -132,6 +242,7 @@
     }
   }
 
+  // --- Positions ---
   async function fetchPositions() {
     try {
       const res = await fetch('/api/positions');
@@ -189,6 +300,85 @@
     } catch(e) { msgEl.style.color='#f85149'; msgEl.textContent = 'Network error'; }
   }
 
+  // --- Analytics ---
+  async function fetchAnalytics() {
+    try {
+      const res = await fetch('/api/analytics');
+      const d = await res.json();
+
+      setText('aTotalTrades', d.totalTrades ?? 0, 'neutral');
+      setText('aTotalClosed', d.totalClosed ?? 0, 'neutral');
+      setPnL('aTotalPnL', d.totalPnL ?? 0);
+      setWinRate(d.winRate ?? 0);
+      setPnL('aAvgPnL', d.avgPnL ?? 0);
+      setPnL('aBestTrade', Math.abs(d.bestTrade ?? 0), true);
+      setPnL('aWorstTrade', -(Math.abs(d.worstTrade ?? 0)), false, true);
+      setText('aDailyTrades', d.dailyTrades ?? 0, 'neutral');
+
+      renderPlatformBreakdown(d.byPlatform || {});
+      renderJournal(d.recentJournals || []);
+    } catch(e) {}
+  }
+
+  function setText(id, val, cls) {
+    const el = document.getElementById(id);
+    el.textContent = val;
+    el.className = 'metric-value ' + (cls || '');
+  }
+
+  function setPnL(id, val, forcePositive, forceNegative) {
+    const el = document.getElementById(id);
+    const n = parseFloat(val) || 0;
+    el.textContent = (n >= 0 ? '+' : '') + '$' + Math.abs(n).toFixed(2);
+    if (forcePositive) { el.className = 'metric-value positive'; }
+    else if (forceNegative) { el.className = 'metric-value negative'; }
+    else { el.className = 'metric-value ' + (n >= 0 ? 'positive' : 'negative'); }
+  }
+
+  function setWinRate(rate) {
+    const pct = parseFloat(rate) || 0;
+    document.getElementById('winRatePct').textContent = pct.toFixed(1) + '%';
+    const circumference = 2 * Math.PI * 50;
+    const filled = (pct / 100) * circumference;
+    const arc = document.getElementById('winRateArc');
+    arc.setAttribute('stroke-dasharray', `${filled.toFixed(1)} ${circumference.toFixed(1)}`);
+    arc.setAttribute('stroke', pct >= 50 ? '#3fb950' : '#f85149');
+  }
+
+  function renderPlatformBreakdown(byPlatform) {
+    const el = document.getElementById('platformBreakdown');
+    const entries = Object.entries(byPlatform);
+    if (!entries.length) { el.innerHTML = '<div class="empty">No trades yet</div>'; return; }
+    const maxTrades = Math.max(...entries.map(([,v]) => v.trades));
+    el.innerHTML = entries.map(([platform, stat]) => {
+      const pct = maxTrades > 0 ? (stat.trades / maxTrades * 100).toFixed(0) : 0;
+      return `<div class="platform-bar">
+        <span class="platform-name">${platform}</span>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+        <span class="platform-count">${stat.trades} trades</span>
+      </div>`;
+    }).join('');
+  }
+
+  function renderJournal(journals) {
+    const el = document.getElementById('journalTable');
+    if (!journals.length) { el.innerHTML = '<div class="empty">No journal entries yet — trades will appear here after stop-loss or take-profit events</div>'; return; }
+    el.innerHTML = `<table>
+      <thead><tr><th>Date</th><th>Trades</th><th>P&L</th><th>Notes</th></tr></thead>
+      <tbody>${journals.map(j => {
+        const pnlClass = j.pnl >= 0 ? 'positive' : 'negative';
+        const pnlText = (j.pnl >= 0 ? '+' : '') + '$' + Math.abs(j.pnl).toFixed(2);
+        return `<tr class="journal-row">
+          <td>${j.date}</td>
+          <td>${j.trades}</td>
+          <td class="${pnlClass}">${pnlText}</td>
+          <td style="color:#8b949e;font-size:0.75rem;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${j.notes}</td>
+        </tr>`;
+      }).join('')}
+      </tbody></table>`;
+  }
+
+  // --- Markets ---
   async function searchMarkets() {
     const q = document.getElementById('searchQuery').value;
     const category = document.getElementById('searchCategory').value;
@@ -227,7 +417,6 @@
   function init() {
     fetchStatus();
     fetchPositions();
-    fetchTrending();
     setInterval(fetchStatus, 10000);
     setInterval(fetchPositions, 10000);
   }
