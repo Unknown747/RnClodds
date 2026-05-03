@@ -49,8 +49,8 @@ func LoadConfig() *Config {
         c.APIKeys.OpenAI = os.Getenv("OPENAI_API_KEY")
         c.APIKeys.Google = os.Getenv("GOOGLE_API_KEY")
         c.APIKeys.Groq = os.Getenv("GROQ_API_KEY")
-        c.AI.Providers = []string{"groq", "anthropic", "openai", "google"}
-        c.AI.DefaultModel = getenv("AI_DEFAULT_MODEL", "groq")
+        c.AI.Providers = []string{"google", "groq", "anthropic", "openai"}
+        c.AI.DefaultModel = getenv("AI_DEFAULT_MODEL", "google")
 
         c.Trading.DefaultPositionSize = envInt("DEFAULT_POSITION_SIZE", 100)
         c.Trading.MaxPositionSize = envInt("MAX_POSITION_SIZE", 1000)

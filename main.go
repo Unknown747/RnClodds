@@ -256,17 +256,17 @@ func jsonError(w http.ResponseWriter, msg string, code int) {
 }
 
 func preferredAIProvider(cfg *Config) string {
+        if cfg.APIKeys.Google != "" {
+                return "google"
+        }
         if cfg.APIKeys.Groq != "" {
                 return "groq"
-        }
-        if cfg.APIKeys.Anthropic != "" {
-                return "anthropic"
         }
         if cfg.APIKeys.OpenAI != "" {
                 return "openai"
         }
-        if cfg.APIKeys.Google != "" {
-                return "google"
+        if cfg.APIKeys.Anthropic != "" {
+                return "anthropic"
         }
         return "none"
 }
