@@ -27,7 +27,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "go run ."
+args = "./start"
 waitForPort = 5000
 
 [[ports]]
