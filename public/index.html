@@ -147,8 +147,9 @@
       <input type="number" id="tradeSize" placeholder="Size ($)" min="1" />
       <input type="number" id="tradeStopLoss" placeholder="Stop Loss price (optional)" step="0.01" />
       <input type="number" id="tradeTakeProfit" placeholder="Take Profit price (optional)" step="0.01" />
-      <button onclick="placeTrade()">Execute Order</button>
+      <button id="tradeBtn" onclick="placeTrade()">Execute Order</button>
       <div id="msg"></div>
+      <div id="tradeAIResult"></div>
     </div>
 
     <div class="card full-width">
@@ -355,11 +356,33 @@ async function placeTrade() {
   const stopLoss = document.getElementById('tradeStopLoss').value;
   const takeProfit = document.getElementById('tradeTakeProfit').value;
   const msgEl = document.getElementById('msg');
-  if (!market || !size) { msgEl.style.color='#f85149'; msgEl.textContent = 'Market and size are required.'; return; }
-  msgEl.style.color='#8b949e'; msgEl.textContent = 'Executing...';
+  const aiEl = document.getElementById('tradeAIResult');
+  const btn = document.getElementById('tradeBtn');
+
+  if (!market || !size) {
+    msgEl.style.color='#f85149'; msgEl.textContent = 'Market and size are required.';
+    return;
+  }
+
+  // Lock UI and show AI analysis spinner
+  btn.disabled = true;
+  btn.textContent = 'Analyzing...';
+  msgEl.style.color='#8b949e';
+  msgEl.textContent = '';
+  aiEl.innerHTML = `<div class="analyzing" style="margin-top:10px;"><div class="spinner"></div>Running AI analysis before execution...</div>`;
+
   try {
-    const res = await fetch('/api/trade', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ market, side, size, stopLoss: stopLoss ? parseFloat(stopLoss) : null, takeProfit: takeProfit ? parseFloat(takeProfit) : null }) });
+    const res = await fetch('/api/trade', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        market, side, size,
+        stopLoss: stopLoss ? parseFloat(stopLoss) : null,
+        takeProfit: takeProfit ? parseFloat(takeProfit) : null
+      })
+    });
     const data = await res.json();
+
     if (data.success) {
       msgEl.style.color='#3fb950';
       msgEl.textContent = `Order placed on ${data.platform} @ $${data.entryPrice?.toFixed(3)}`;
@@ -368,10 +391,61 @@ async function placeTrade() {
       document.getElementById('tradeStopLoss').value = '';
       document.getElementById('tradeTakeProfit').value = '';
       fetchPositions(); fetchStatus();
+
+      // Show AI analysis result if returned
+      if (data.aiAnalysis) {
+        renderTradeAIResult(aiEl, data.aiAnalysis, true);
+      } else {
+        aiEl.innerHTML = '<div style="font-size:0.76rem;color:#8b949e;margin-top:8px;">No AI providers configured — order placed without AI gate.</div>';
+      }
     } else {
-      msgEl.style.color='#f85149'; msgEl.textContent = data.error || 'Trade failed';
+      msgEl.style.color='#f85149';
+      msgEl.textContent = data.error || 'Trade failed';
+      // If rejected by AI, render the AI analysis for context even on failure
+      // The error message contains the AI info; clear spinner with rejection state
+      aiEl.innerHTML = `<div class="trade-ai-rejected" style="margin-top:10px;background:#1a0a0a;border:1px solid #6e2020;border-radius:8px;padding:12px;">
+        <div style="color:#f85149;font-size:0.78rem;font-weight:bold;margin-bottom:6px;">AI GATE — ORDER REJECTED</div>
+        <div style="color:#8b949e;font-size:0.76rem;line-height:1.5;">${data.error || 'Confidence below threshold'}</div>
+      </div>`;
     }
-  } catch(e) { msgEl.style.color='#f85149'; msgEl.textContent = 'Network error'; }
+  } catch(e) {
+    msgEl.style.color='#f85149'; msgEl.textContent = 'Network error';
+    aiEl.innerHTML = '';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Execute Order';
+  }
+}
+
+function renderTradeAIResult(el, d, approved) {
+  const best = d.best;
+  const dirColor = best.direction === 'buy' ? '#3fb950' : best.direction === 'sell' ? '#f85149' : '#e3b341';
+  const confPct = (best.confidence * 100).toFixed(0);
+  const riskPct = (best.riskScore * 100).toFixed(0);
+  const borderColor = approved ? '#1a3d28' : '#6e2020';
+  const statusLabel = approved
+    ? `<span style="background:#1a3d28;color:#3fb950;padding:2px 8px;border-radius:4px;font-size:0.7rem;font-weight:bold;">AI APPROVED</span>`
+    : `<span style="background:#3d1a1a;color:#f85149;padding:2px 8px;border-radius:4px;font-size:0.7rem;font-weight:bold;">AI REJECTED</span>`;
+
+  el.innerHTML = `<div style="margin-top:10px;background:#0d1117;border:1px solid ${borderColor};border-radius:8px;padding:12px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+      ${statusLabel}
+      <span class="ai-provider-tag">${best.provider}</span>
+      <span style="font-size:0.72rem;color:#8b949e;">consensus: ${d.consensus}</span>
+    </div>
+    <div style="font-size:0.92rem;font-weight:bold;color:${dirColor};margin-bottom:4px;">${best.direction.toUpperCase()} — conf ${confPct}%</div>
+    <div style="font-size:0.76rem;color:#8b949e;margin-bottom:10px;line-height:1.5;">${best.reason || ''}</div>
+    <div class="ai-bar-row">
+      <span class="ai-bar-label">Confidence</span>
+      <div class="ai-bar-track"><div class="ai-bar-fill-conf" style="width:${confPct}%"></div></div>
+      <span class="ai-bar-pct">${confPct}%</span>
+    </div>
+    <div class="ai-bar-row">
+      <span class="ai-bar-label">Risk Score</span>
+      <div class="ai-bar-track"><div class="ai-bar-fill-risk" style="width:${riskPct}%"></div></div>
+      <span class="ai-bar-pct">${riskPct}%</span>
+    </div>
+  </div>`;
 }
 
 // --- AI Analysis ---
