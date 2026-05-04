@@ -170,6 +170,10 @@
     .rec-toolbar select, .rec-toolbar input { width: auto; margin-bottom: 0; flex: 1; min-width: 130px; max-width: 200px; }
     .rec-toolbar button { width: auto; padding: 8px 14px; }
     .rec-count { margin-left: auto; font-size: 0.76rem; color: #8b949e; white-space: nowrap; }
+    .filter-btn { background: transparent; border: 1px solid #30363d; color: #8b949e; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.76rem; font-family: inherit; transition: all 0.15s; width: auto; }
+    .filter-btn:hover { border-color: #58a6ff; color: #58a6ff; background: transparent; }
+    .filter-btn.active { background: #1a4731; border-color: #3fb950; color: #3fb950; }
+    .filter-btn:disabled { opacity: 0.4; cursor: default; border-color: #30363d; color: #8b949e; background: transparent; }
     .auto-scan-bar { display: flex; align-items: center; gap: 8px; padding: 8px 16px; font-size: 0.78rem; color: #8b949e; min-height: 36px; background: #0d1117; border-bottom: 1px solid #21262d; }
     .rec-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 14px; padding: 16px; }
 
@@ -301,6 +305,11 @@
     <input type="text" id="recSearch" placeholder="Cari market..." onkeydown="if(event.key==='Enter')loadRecommendations()" />
     <button onclick="loadRecommendations()">Cari</button>
     <button id="autoScanBtn" onclick="startAutoScan()" style="background:#1f6feb;">Auto-scan Top 10</button>
+    <button id="confFilterBtn" class="filter-btn" onclick="toggleConfFilter()" disabled title="Analisis setidaknya satu market dulu">★ Confidence ≥ 75%</button>
+    <select id="recSort" onchange="applyRecFilter()" style="width:auto;margin-bottom:0;min-width:0;flex:none;font-size:0.76rem;padding:6px 8px;">
+      <option value="volume">Urut: Volume</option>
+      <option value="conf">Urut: Confidence</option>
+    </select>
     <span class="rec-count" id="recCount"></span>
   </div>
   <div class="auto-scan-bar" id="autoScanBar"></div>
@@ -591,9 +600,15 @@ async function placeTrade() {
 // ── REKOMENDASI ───────────────────────────────────────────────────────────────
 let recMarkets    = [];
 let autoScanActive = false;
+let recAnalysis   = {};   // idx → { conf, risk, dir }
+let confFilterOn  = false;
 
 async function loadRecommendations() {
   stopAutoScan();
+  recAnalysis  = {};
+  confFilterOn = false;
+  const filterBtn = $('confFilterBtn');
+  if (filterBtn) { filterBtn.disabled = true; filterBtn.classList.remove('active'); }
   const cat  = $('recCategory').value;
   const plat = $('recPlatform').value;
   const q    = $('recSearch').value.trim();
@@ -708,6 +723,10 @@ async function analyzeRecCard(idx, question, silent = false) {
       <div class="rec-reason">${best.reason || 'No analysis available'}</div>
       <div style="margin-bottom:10px;">${barRows(conf, risk)}</div>
       ${provHTML ? `<div style="display:flex;flex-wrap:wrap;gap:5px;">${provHTML}</div>` : ''}`;
+    // Store result for filter/sort
+    recAnalysis[idx] = { conf, risk, dir };
+    updateFilterBtn();
+    applyRecFilter();
     executeEl.classList.add('visible');
     btn.innerHTML = '▲ Sembunyikan';
   } catch {
@@ -774,10 +793,65 @@ async function startAutoScan() {
   }
 
   autoScanActive = false;
+  const done = Object.keys(recAnalysis).length;
   bar.innerHTML = `
     <span style="color:#3fb950;">✓ Auto-scan selesai — ${top.length} market dianalisis</span>
+    ${done > 0 ? `<button onclick="confFilterOn=false;toggleConfFilter()" style="width:auto;padding:3px 10px;font-size:0.73rem;background:#1a4731;border:1px solid #3fb950;color:#3fb950;margin-left:8px;">Tampilkan ≥ 75% saja</button>` : ''}
     <button onclick="$('autoScanBar').innerHTML=''" style="width:auto;padding:3px 10px;font-size:0.73rem;background:#21262d;border:1px solid #30363d;color:#8b949e;margin-left:8px;">Tutup</button>`;
 }
+
+// ── Confidence filter & sort ───────────────────────────────────────────────────
+function updateFilterBtn() {
+  const btn  = $('confFilterBtn');
+  if (!btn) return;
+  const analysedCount = Object.keys(recAnalysis).length;
+  const qualCount     = Object.values(recAnalysis).filter(r => r.conf >= 75).length;
+  btn.disabled = analysedCount === 0;
+  btn.classList.toggle('active', confFilterOn);
+  btn.textContent = confFilterOn
+    ? `★ Confidence ≥ 75% (${qualCount})`
+    : `★ Confidence ≥ 75%${analysedCount > 0 ? ` (${qualCount}/${analysedCount})` : ''}`;
+}
+
+function toggleConfFilter() {
+  confFilterOn = !confFilterOn;
+  updateFilterBtn();
+  applyRecFilter();
+}
+
+function applyRecFilter() {
+  const grid  = $('recGrid');
+  const sort  = $('recSort')?.value || 'volume';
+  const cards = [...grid.querySelectorAll('.rec-card')];
+  if (!cards.length) return;
+
+  // Build order: indices with analysis first (sorted), then unanalysed (original order)
+  const withConf    = cards.filter(c => recAnalysis[cardIdx(c)] !== undefined)
+                           .sort((a, b) => (recAnalysis[cardIdx(b)]?.conf || 0) - (recAnalysis[cardIdx(a)]?.conf || 0));
+  const withoutConf = cards.filter(c => recAnalysis[cardIdx(c)] === undefined);
+  const ordered     = sort === 'conf' ? [...withConf, ...withoutConf] : cards;
+
+  // Apply filter visibility & re-order
+  let visible = 0;
+  ordered.forEach(card => {
+    const idx  = cardIdx(card);
+    const data = recAnalysis[idx];
+    const show = !confFilterOn || (data && data.conf >= 75);
+    card.style.display = show ? '' : 'none';
+    if (show) visible++;
+    grid.appendChild(card);   // re-insert in sorted order
+  });
+
+  // Update count label
+  const total = recMarkets.length;
+  if (confFilterOn) {
+    $('recCount').textContent = `${visible} dari ${total} market (conf ≥ 75%)`;
+  } else {
+    $('recCount').textContent = `${total} market ditemukan`;
+  }
+}
+
+const cardIdx = el => parseInt(el.id.replace('rec-card-', ''), 10);
 
 // ── Signals ───────────────────────────────────────────────────────────────────
 async function fetchSignals() {
