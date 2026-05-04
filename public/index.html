@@ -53,6 +53,22 @@
     .search-row button { width: auto; padding: 8px 14px; }
     #msg { font-size: 0.8rem; margin-top: 6px; min-height: 18px; }
 
+    /* Live price feed */
+    .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #3fb950; display: inline-block; flex-shrink: 0; }
+    @keyframes livepulse { 0%,100% { opacity: 1; box-shadow: 0 0 0 0 #3fb95066; } 50% { opacity: 0.7; box-shadow: 0 0 0 5px #3fb95000; } }
+    .live-dot { animation: livepulse 1.8s ease-in-out infinite; }
+    @keyframes flash-up { 0% { background: #1a4731; } 100% { background: transparent; } }
+    @keyframes flash-dn { 0% { background: #3d1a1a; } 100% { background: transparent; } }
+    .price-up { animation: flash-up 0.8s ease-out; }
+    .price-dn { animation: flash-dn 0.8s ease-out; }
+    .pnl-badge { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
+    .pnl-pos { background: #1a4731; color: #3fb950; }
+    .pnl-neg { background: #3d1a1a; color: #f85149; }
+    .pnl-zero { background: #21262d; color: #8b949e; }
+    .price-cell { font-variant-numeric: tabular-nums; letter-spacing: 0.01em; }
+    .update-ticker { font-size: 0.68rem; color: #8b949e; margin-left: auto; }
+    .pos-header { display: flex; align-items: center; gap: 8px; }
+
     /* Metric grid */
     .metric-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
     .metric { background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 12px 14px; }
@@ -202,7 +218,12 @@
     </div>
 
     <div class="card full-width">
-      <h2>Open Positions</h2>
+      <h2 style="display:flex;align-items:center;gap:8px;">
+        Open Positions
+        <span class="live-dot" title="Live price feed active"></span>
+        <span style="font-size:0.68rem;font-weight:normal;color:#8b949e;">prices update every 4s</span>
+        <span class="update-ticker" id="lastUpdateTime"></span>
+      </h2>
       <div id="positionsTable"><div class="empty">No open positions</div></div>
     </div>
   </div>
@@ -380,37 +401,130 @@ async function fetchStatus() {
   }
 }
 
-// --- Positions ---
+// --- Live Positions ---
+// Track previous prices to detect direction changes for flash animation
+const _prevPrices = {};
+
 async function fetchPositions() {
   try {
-    const res = await fetch('/api/positions');
+    const res = await fetch('/api/positions/live');
     const positions = await res.json();
     const el = document.getElementById('positionsTable');
-    if (!positions.length) { el.innerHTML = '<div class="empty">No open positions</div>'; return; }
-    el.innerHTML = `<table>
-      <thead><tr><th>ID</th><th>Platform</th><th>Market</th><th>Side</th><th>Size</th><th>Entry</th><th>Current</th><th>SL</th><th>TP</th><th></th></tr></thead>
-      <tbody>${positions.map(p => `
-        <tr>
-          <td style="color:#8b949e;font-size:0.72rem">${p.id.slice(-8)}</td>
-          <td>${p.platform}</td>
-          <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.market}</td>
-          <td><span class="badge badge-${p.side.toLowerCase()}">${p.side}</span></td>
-          <td>$${p.size}</td>
-          <td>$${p.entryPrice?.toFixed(3)}</td>
-          <td>$${p.currentPrice?.toFixed(3)}</td>
-          <td>${p.stopLoss ? '$'+p.stopLoss.price?.toFixed(3) : '-'}</td>
-          <td>${p.takeProfit ? '$'+p.takeProfit.price?.toFixed(3) : '-'}</td>
-          <td><button onclick="closePos('${p.id}')" class="danger-btn" style="width:auto;padding:3px 10px;font-size:0.75rem;">Close</button></td>
-        </tr>`).join('')}
-      </tbody></table>`;
+
+    // Update last-update timestamp
+    const tsEl = document.getElementById('lastUpdateTime');
+    if (tsEl) tsEl.textContent = 'Updated ' + new Date().toLocaleTimeString();
+
+    if (!positions || !positions.length) {
+      el.innerHTML = '<div class="empty">No open positions</div>';
+      _clearPrevPrices();
+      return;
+    }
+
+    // Total live P&L summary row
+    const totalPnL = positions.reduce((s, p) => s + (p.pnl || 0), 0);
+    const totalVal = positions.reduce((s, p) => s + (p.currentPrice * p.size), 0);
+
+    // Render table — detect price movement vs previous snapshot for flash
+    const rows = positions.map(p => {
+      const prev = _prevPrices[p.id];
+      let flashClass = '';
+      if (prev !== undefined) {
+        if (p.currentPrice > prev) flashClass = 'price-up';
+        else if (p.currentPrice < prev) flashClass = 'price-dn';
+      }
+      _prevPrices[p.id] = p.currentPrice;
+
+      const arrow = prev === undefined ? '' : p.currentPrice > prev ? ' ▲' : p.currentPrice < prev ? ' ▼' : '';
+      const arrowColor = p.currentPrice > prev ? '#3fb950' : p.currentPrice < prev ? '#f85149' : '#8b949e';
+
+      const pnlClass = p.pnl > 0 ? 'pnl-pos' : p.pnl < 0 ? 'pnl-neg' : 'pnl-zero';
+      const pnlSign = p.pnl >= 0 ? '+' : '';
+      const pnlStr = `${pnlSign}$${Math.abs(p.pnl).toFixed(2)}`;
+      const pnlPct = `${p.pnlPercent >= 0 ? '+' : ''}${p.pnlPercent.toFixed(1)}%`;
+
+      // Price change from entry
+      const entryDiff = ((p.currentPrice - p.entryPrice) / p.entryPrice * 100).toFixed(1);
+      const entryDiffStr = entryDiff >= 0 ? `+${entryDiff}%` : `${entryDiff}%`;
+      const entryDiffColor = entryDiff >= 0 ? '#3fb950' : '#f85149';
+
+      return `<tr id="row-${p.id}">
+        <td style="color:#8b949e;font-size:0.72rem">${p.id.slice(-8)}</td>
+        <td>${p.platform}</td>
+        <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.market}">${p.market}</td>
+        <td><span class="badge badge-${p.side.toLowerCase()}">${p.side}</span></td>
+        <td class="price-cell">$${p.size.toFixed(0)}</td>
+        <td class="price-cell" style="color:#8b949e;">$${p.entryPrice?.toFixed(4)}</td>
+        <td class="price-cell ${flashClass}" id="px-${p.id}">
+          <span style="font-weight:bold;">$${p.currentPrice?.toFixed(4)}</span>
+          <span style="font-size:0.68rem;color:${arrowColor};margin-left:3px;">${arrow}</span>
+        </td>
+        <td class="price-cell" style="font-size:0.75rem;color:${entryDiffColor};">${entryDiffStr}</td>
+        <td><span class="pnl-badge ${pnlClass}">${pnlStr} <span style="opacity:0.75;font-size:0.68rem;">${pnlPct}</span></span></td>
+        <td style="font-size:0.74rem;color:#8b949e;">${p.stopLoss ? '$'+p.stopLoss.price?.toFixed(3) : '—'}</td>
+        <td style="font-size:0.74rem;color:#8b949e;">${p.takeProfit ? '$'+p.takeProfit.price?.toFixed(3) : '—'}</td>
+        <td>
+          <button onclick="setPriceModal('${p.id}', ${p.currentPrice})" class="secondary-btn" style="width:auto;padding:3px 8px;font-size:0.72rem;margin-bottom:0;" title="Set price manually">✎</button>
+          <button onclick="closePos('${p.id}')" class="danger-btn" style="width:auto;padding:3px 8px;font-size:0.72rem;margin-bottom:0;">✕</button>
+        </td>
+      </tr>`;
+    }).join('');
+
+    const totalPnLClass = totalPnL >= 0 ? 'positive' : 'negative';
+    el.innerHTML = `
+      <div style="display:flex;justify-content:flex-end;gap:16px;margin-bottom:8px;font-size:0.8rem;">
+        <span style="color:#8b949e;">Total Value: <span style="color:#58a6ff;font-weight:bold;">$${totalVal.toFixed(2)}</span></span>
+        <span style="color:#8b949e;">Unrealized P&L: <span class="${totalPnLClass}" style="font-weight:bold;">${totalPnL >= 0 ? '+' : ''}$${Math.abs(totalPnL).toFixed(2)}</span></span>
+      </div>
+      <table>
+        <thead><tr>
+          <th>ID</th><th>Platform</th><th>Market</th><th>Side</th><th>Size</th>
+          <th>Entry</th><th>Current</th><th>Δ Entry</th><th>P&L</th><th>SL</th><th>TP</th><th></th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+
+    // Re-trigger flash animation by forcing reflow
+    positions.forEach(p => {
+      const cell = document.getElementById('px-' + p.id);
+      if (cell && (cell.classList.contains('price-up') || cell.classList.contains('price-dn'))) {
+        void cell.offsetWidth; // reflow
+      }
+    });
   } catch(e) {}
+}
+
+function _clearPrevPrices() {
+  Object.keys(_prevPrices).forEach(k => delete _prevPrices[k]);
+}
+
+// Manual price update modal (simple prompt for now)
+async function setPriceModal(posId, currentPrice) {
+  const val = prompt(`Set current price for position ${posId.slice(-8)}:`, currentPrice.toFixed(4));
+  if (val === null) return;
+  const price = parseFloat(val);
+  if (isNaN(price) || price <= 0) { alert('Invalid price'); return; }
+  try {
+    const res = await fetch('/api/positions/price', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ positionId: posId, price })
+    });
+    const d = await res.json();
+    if (d.success) fetchPositions();
+    else alert('Failed: ' + d.error);
+  } catch(e) { alert('Network error'); }
 }
 
 async function closePos(id) {
   if (!confirm('Close this position?')) return;
   const res = await fetch('/api/close', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ positionId: id }) });
   const data = await res.json();
-  if (data.success) { fetchPositions(); fetchStatus(); }
+  if (data.success) {
+    delete _prevPrices[id];
+    fetchPositions();
+    fetchStatus();
+  }
 }
 
 async function placeTrade() {
@@ -956,7 +1070,7 @@ function init() {
   fetchProviders(); // prime provider cache silently
   pollSignalCount(); // initial badge count
   setInterval(fetchStatus, 10000);
-  setInterval(fetchPositions, 15000);
+  setInterval(fetchPositions, 4000);  // live price feed — every 4s
   setInterval(pollSignalCount, 30000); // keep badge fresh every 30s
 }
 init();
