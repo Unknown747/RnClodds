@@ -106,6 +106,54 @@
 
     /* Backtest */
     .backtest-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+
+    /* Signal cards */
+    .scanner-status-bar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 10px 14px; background: #0d1117; border: 1px solid #30363d; border-radius: 8px; margin-bottom: 14px; font-size: 0.8rem; }
+    .scanner-status-bar .s-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .scanner-status-bar .s-running { background: #3fb950; box-shadow: 0 0 6px #3fb95088; }
+    .scanner-status-bar .s-stopped { background: #8b949e; }
+    .scanner-status-bar .s-label { color: #8b949e; }
+    .scanner-status-bar .s-val { color: #e6edf3; font-weight: bold; }
+    .scanner-status-bar .s-count { background: #1f6feb; color: #fff; padding: 2px 8px; border-radius: 10px; font-weight: bold; font-size: 0.74rem; }
+    .scanner-status-bar .s-refresh { margin-left: auto; background: transparent; border: 1px solid #30363d; color: #8b949e; padding: 4px 12px; border-radius: 6px; width: auto; font-size: 0.75rem; }
+    .scanner-status-bar .s-refresh:hover { border-color: #58a6ff; color: #58a6ff; background: transparent; }
+    .signals-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 12px; }
+    .signal-card { background: #0d1117; border-radius: 8px; padding: 14px; border: 1px solid #30363d; position: relative; transition: border-color 0.2s; }
+    .signal-card.sig-buy { border-left: 3px solid #3fb950; }
+    .signal-card.sig-sell { border-left: 3px solid #f85149; }
+    .signal-card.sig-hold { border-left: 3px solid #e3b341; }
+    .signal-card.sig-high { box-shadow: 0 0 10px #3fb95022; }
+    @keyframes sigpulse { 0%,100% { box-shadow: 0 0 6px #3fb95033; } 50% { box-shadow: 0 0 16px #3fb95066; } }
+    .signal-card.sig-high.sig-buy { animation: sigpulse 2.5s ease-in-out infinite; }
+    .signal-card-top { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+    .sig-dir-badge { padding: 3px 10px; border-radius: 4px; font-size: 0.72rem; font-weight: bold; flex-shrink: 0; }
+    .sig-dir-buy { background: #1a4731; color: #3fb950; }
+    .sig-dir-sell { background: #3d1a1a; color: #f85149; }
+    .sig-dir-hold { background: #2d2a1a; color: #e3b341; }
+    .sig-conf { font-size: 1.3rem; font-weight: bold; line-height: 1; margin-left: auto; }
+    .sig-conf-green { color: #3fb950; }
+    .sig-conf-yellow { color: #e3b341; }
+    .sig-market { font-size: 0.82rem; color: #e6edf3; margin-bottom: 4px; line-height: 1.4; font-weight: bold; }
+    .sig-reason { font-size: 0.74rem; color: #8b949e; line-height: 1.45; margin-bottom: 10px; }
+    .sig-meta { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+    .sig-meta-tag { background: #161b22; border: 1px solid #30363d; color: #8b949e; padding: 1px 7px; border-radius: 4px; font-size: 0.68rem; }
+    .sig-bar-row { display: flex; align-items: center; gap: 8px; font-size: 0.72rem; margin-bottom: 5px; }
+    .sig-bar-label { width: 70px; color: #8b949e; }
+    .sig-bar-track { flex: 1; background: #21262d; border-radius: 3px; height: 4px; }
+    .sig-bar-fill-conf { height: 4px; border-radius: 3px; }
+    .sig-bar-fill-risk { background: #f85149; height: 4px; border-radius: 3px; }
+    .sig-bar-pct { width: 32px; text-align: right; color: #8b949e; }
+    .sig-actions { display: flex; gap: 8px; margin-top: 12px; }
+    .sig-trade-btn { flex: 1; padding: 7px 12px; border-radius: 6px; font-size: 0.78rem; border: none; cursor: pointer; font-family: inherit; font-weight: bold; transition: background 0.15s; }
+    .sig-trade-buy { background: #238636; color: #fff; }
+    .sig-trade-buy:hover { background: #2ea043; }
+    .sig-trade-sell { background: #b91c1c; color: #fff; }
+    .sig-trade-sell:hover { background: #dc2626; }
+    .sig-analyze-btn { padding: 7px 12px; border-radius: 6px; font-size: 0.78rem; border: 1px solid #30363d; color: #8b949e; background: transparent; cursor: pointer; font-family: inherit; width: auto; transition: all 0.15s; }
+    .sig-analyze-btn:hover { border-color: #58a6ff; color: #58a6ff; background: transparent; }
+    .sig-time { font-size: 0.68rem; color: #8b949e; margin-top: 8px; }
+    .sig-nav-badge { background: #1f6feb; color: #fff; border-radius: 8px; padding: 0px 5px; font-size: 0.65rem; font-weight: bold; margin-left: 4px; vertical-align: middle; display: inline-block; line-height: 1.4; }
+    .sig-no-key-notice { background: #1a1400; border: 1px solid #9e6a03; border-radius: 8px; padding: 14px 16px; font-size: 0.82rem; color: #e3b341; margin-bottom: 12px; line-height: 1.6; }
   </style>
 </head>
 <body>
@@ -116,6 +164,7 @@
   <span id="killBadge" style="display:none;background:#6e2020;color:#f85149;padding:2px 10px;border-radius:4px;font-size:0.72rem;">KILL SWITCH ON</span>
   <nav>
     <button class="active" onclick="showPage('dashboard',this)">Dashboard</button>
+    <button onclick="showPage('signals',this)" id="navSignals">Signals</button>
     <button onclick="showPage('ai',this)">AI Analysis</button>
     <button onclick="showPage('risk',this)">Risk</button>
     <button onclick="showPage('analytics',this)">Analytics</button>
@@ -155,6 +204,20 @@
     <div class="card full-width">
       <h2>Open Positions</h2>
       <div id="positionsTable"><div class="empty">No open positions</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- SIGNALS -->
+<div id="page-signals" class="page">
+  <div class="container">
+    <div class="card full-width">
+      <h2>Opportunity Scanner <span style="font-size:0.7rem;font-weight:normal;color:#8b949e;">AI scans all markets every 10 min · confidence ≥ 75%</span></h2>
+      <div id="scannerStatusBar"><div class="empty">Loading scanner status...</div></div>
+      <div id="noKeyNotice" style="display:none;" class="sig-no-key-notice">
+        No AI provider keys configured — scanner cannot analyze markets without an API key. Set at least one of <strong>GOOGLE_API_KEY</strong>, <strong>GROQ_API_KEY</strong>, <strong>OPENAI_API_KEY</strong>, or <strong>ANTHROPIC_API_KEY</strong> in Replit Secrets, then restart the bot.
+      </div>
+      <div id="signalsGrid"><div class="empty">Waiting for scanner results...</div></div>
     </div>
   </div>
 </div>
@@ -287,6 +350,7 @@ function showPage(name, btn) {
   if (name === 'risk') fetchRisk();
   if (name === 'ai') fetchProviders();
   if (name === 'backtest') runBacktest();
+  if (name === 'signals') fetchSignals();
 }
 
 // --- Status ---
@@ -719,6 +783,167 @@ function renderMarkets(elId, markets, emptyMsg) {
     </div>`).join('');
 }
 
+// --- Signals ---
+let _signalProviders = null;
+
+async function fetchSignals() {
+  // Check providers (only once per session)
+  if (!_signalProviders) {
+    try {
+      const pr = await (await fetch('/api/ai/providers')).json();
+      _signalProviders = pr;
+    } catch(e) { _signalProviders = {}; }
+  }
+  const noKeys = !(_signalProviders.google || _signalProviders.groq || _signalProviders.openai || _signalProviders.anthropic);
+  document.getElementById('noKeyNotice').style.display = noKeys ? 'block' : 'none';
+
+  await Promise.all([fetchScannerStatus(), fetchScannerSignals()]);
+}
+
+async function fetchScannerStatus() {
+  try {
+    const d = await (await fetch('/api/scanner/status')).json();
+    const bar = document.getElementById('scannerStatusBar');
+    const lastScan = d.lastScanAt ? new Date(d.lastScanAt).toLocaleTimeString() : 'never';
+    const nextScan = d.nextScanAt ? new Date(d.nextScanAt).toLocaleTimeString() : '—';
+    bar.innerHTML = `
+      <span class="s-dot ${d.running ? 's-running' : 's-stopped'}"></span>
+      <span class="${d.running ? 'stat-val' : 's-label'}">${d.running ? 'SCANNING' : 'STOPPED'}</span>
+      <span class="s-label">Last scan:</span><span class="s-val">${lastScan}</span>
+      <span class="s-label">Next scan:</span><span class="s-val">${nextScan}</span>
+      <span class="s-label">Markets scanned:</span><span class="s-val">${d.marketsScanned}</span>
+      <span class="s-label">Min conf:</span><span class="s-val">${(d.minSignalConf * 100).toFixed(0)}%</span>
+      <span class="s-count">${d.signalCount} signal${d.signalCount !== 1 ? 's' : ''}</span>
+      <button class="s-refresh" onclick="fetchSignals()">↻ Refresh</button>`;
+  } catch(e) {}
+}
+
+async function fetchScannerSignals() {
+  try {
+    const d = await (await fetch('/api/scanner/signals')).json();
+    const grid = document.getElementById('signalsGrid');
+    const signals = d.signals || [];
+
+    // Update nav badge
+    updateSignalBadge(signals.length);
+
+    if (!signals.length) {
+      grid.innerHTML = `<div class="empty">No signals yet — scanner needs AI provider keys to detect opportunities.<br>Markets are scanned every 10 minutes once keys are configured.</div>`;
+      return;
+    }
+
+    grid.innerHTML = `<div class="signals-grid">${signals.map((s, i) => renderSignalCard(s, i)).join('')}</div>`;
+  } catch(e) {
+    document.getElementById('signalsGrid').innerHTML = '<div class="empty" style="color:#f85149">Failed to load signals</div>';
+  }
+}
+
+function renderSignalCard(s, idx) {
+  const conf = Math.round(s.confidence * 100);
+  const risk = Math.round(s.riskScore * 100);
+  const dir = s.direction || 'hold';
+  const isHigh = s.confidence >= 0.85;
+  const confColor = s.confidence >= 0.85 ? '#3fb950' : '#e3b341';
+  const confBarColor = s.confidence >= 0.85 ? '#3fb950' : '#e3b341';
+  const detectedAt = s.detectedAt ? new Date(s.detectedAt).toLocaleTimeString() : '';
+  const rank = idx === 0 ? '<span style="background:#2d2a1a;color:#e3b341;padding:2px 7px;border-radius:4px;font-size:0.68rem;font-weight:bold;">TOP SIGNAL</span>' :
+               idx === 1 ? '<span style="background:#1a3028;color:#58a6ff;padding:2px 7px;border-radius:4px;font-size:0.68rem;">#2</span>' : '';
+
+  const tradeBtn = dir === 'hold'
+    ? `<button class="sig-trade-btn" style="flex:1;padding:7px 12px;border-radius:6px;font-size:0.78rem;border:1px solid #30363d;color:#8b949e;background:transparent;cursor:not-allowed;" disabled>HOLD — No trade</button>`
+    : dir === 'buy'
+      ? `<button class="sig-trade-btn sig-trade-buy" onclick="tradeSignal(${JSON.stringify(s.market)}, 'YES')">▲ Trade YES</button>`
+      : `<button class="sig-trade-btn sig-trade-sell" onclick="tradeSignal(${JSON.stringify(s.market)}, 'NO')">▼ Trade NO</button>`;
+
+  return `<div class="signal-card sig-${dir} ${isHigh ? 'sig-high' : ''}">
+    <div class="signal-card-top">
+      <span class="sig-dir-badge sig-dir-${dir}">${dir.toUpperCase()}</span>
+      ${rank}
+      <span class="sig-meta-tag" style="margin-left:auto;">${s.platform || ''}</span>
+      <span class="sig-conf ${conf >= 85 ? 'sig-conf-green' : 'sig-conf-yellow'}">${conf}%</span>
+    </div>
+    <div class="sig-market">${s.market}</div>
+    <div class="sig-reason">${s.reason || 'No reason provided'}</div>
+    <div class="sig-meta">
+      <span class="sig-meta-tag">provider: ${s.provider || '—'}</span>
+      <span class="sig-meta-tag">consensus: ${s.consensus || '—'}</span>
+      <span class="sig-meta-tag">score: ${s.score ? s.score.toFixed(3) : '—'}</span>
+    </div>
+    <div class="sig-bar-row">
+      <span class="sig-bar-label">Confidence</span>
+      <div class="sig-bar-track"><div class="sig-bar-fill-conf" style="width:${conf}%;background:${confBarColor};"></div></div>
+      <span class="sig-bar-pct">${conf}%</span>
+    </div>
+    <div class="sig-bar-row">
+      <span class="sig-bar-label">Risk Score</span>
+      <div class="sig-bar-track"><div class="sig-bar-fill-risk" style="width:${risk}%;"></div></div>
+      <span class="sig-bar-pct">${risk}%</span>
+    </div>
+    <div class="sig-actions">
+      ${tradeBtn}
+      <button class="sig-analyze-btn" onclick="analyzeFromSignal(${JSON.stringify(s.market)})">Analyze ↗</button>
+    </div>
+    <div class="sig-time">Detected ${detectedAt}</div>
+  </div>`;
+}
+
+// Trade a signal — navigate to dashboard, pre-fill the trade form
+function tradeSignal(market, side) {
+  // Switch to dashboard
+  const dashBtn = document.querySelector('nav button');
+  showPage('dashboard', dashBtn);
+  dashBtn.classList.add('active');
+
+  // Pre-fill the trade form
+  document.getElementById('tradeMarket').value = market;
+  document.getElementById('tradeSide').value = side;
+  document.getElementById('tradeSize').value = '';
+
+  // Scroll the trade form into view and highlight it
+  const tradeCard = document.getElementById('tradeMarket').closest('.card');
+  tradeCard.style.borderColor = '#1f6feb';
+  tradeCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  setTimeout(() => { tradeCard.style.borderColor = ''; }, 2000);
+
+  // Show a hint
+  const msgEl = document.getElementById('msg');
+  msgEl.style.color = '#58a6ff';
+  msgEl.textContent = `Signal loaded: ${side} on "${market}" — set a size and click Execute Order.`;
+}
+
+// Analyze a signal market from the AI page
+function analyzeFromSignal(market) {
+  const aiBtn = document.querySelectorAll('nav button')[2]; // AI Analysis button
+  showPage('ai', aiBtn);
+  document.getElementById('aiMarket').value = market;
+  runAnalysis();
+}
+
+// Update the signal count badge on the nav button
+function updateSignalBadge(count) {
+  const navBtn = document.getElementById('navSignals');
+  if (!navBtn) return;
+  let badge = navBtn.querySelector('.sig-nav-badge');
+  if (count > 0) {
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.className = 'sig-nav-badge';
+      navBtn.appendChild(badge);
+    }
+    badge.textContent = count;
+  } else {
+    if (badge) badge.remove();
+  }
+}
+
+// Poll signal count in background to update nav badge
+async function pollSignalCount() {
+  try {
+    const d = await (await fetch('/api/scanner/status')).json();
+    updateSignalBadge(d.signalCount || 0);
+  } catch(e) {}
+}
+
 // --- Helpers ---
 function fmtPnL(v) {
   const n = parseFloat(v) || 0;
@@ -728,8 +953,11 @@ function fmtPnL(v) {
 function init() {
   fetchStatus();
   fetchPositions();
+  fetchProviders(); // prime provider cache silently
+  pollSignalCount(); // initial badge count
   setInterval(fetchStatus, 10000);
   setInterval(fetchPositions, 15000);
+  setInterval(pollSignalCount, 30000); // keep badge fresh every 30s
 }
 init();
 </script>
