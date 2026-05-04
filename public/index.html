@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CloddsBot Trading Terminal</title>
   <style>
+    /* ── Reset & Base ─────────────────────────────────────────────────────── */
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { background: #0d1117; color: #e6edf3; font-family: 'Courier New', monospace; }
     header { background: #161b22; border-bottom: 1px solid #30363d; padding: 12px 24px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -17,6 +18,9 @@
     .page { display: none; }
     .page.active { display: block; }
     .container { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 16px; }
+    .full-width { grid-column: 1 / -1; }
+
+    /* ── Cards & Layout ───────────────────────────────────────────────────── */
     .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 16px; }
     .card h2 { font-size: 0.85rem; color: #8b949e; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
     .stat-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #21262d; font-size: 0.84rem; }
@@ -24,15 +28,10 @@
     .stat-val { color: #58a6ff; font-weight: bold; }
     .positive { color: #3fb950 !important; }
     .negative { color: #f85149 !important; }
-    .neutral { color: #e6edf3 !important; }
-    table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-    th { color: #8b949e; text-align: left; padding: 6px 8px; border-bottom: 1px solid #30363d; font-weight: normal; }
-    td { padding: 8px; border-bottom: 1px solid #21262d; }
-    tr:last-child td { border-bottom: none; }
-    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: bold; }
-    .badge-yes, .badge-buy { background: #1a4731; color: #3fb950; }
-    .badge-no, .badge-sell { background: #3d1a1a; color: #f85149; }
-    .badge-hold { background: #2d2d1a; color: #e3b341; }
+    .neutral  { color: #e6edf3  !important; }
+    .empty { color: #8b949e; text-align: center; padding: 24px; font-size: 0.84rem; }
+
+    /* ── Forms ────────────────────────────────────────────────────────────── */
     input, select { background: #0d1117; border: 1px solid #30363d; color: #e6edf3; padding: 8px 10px; border-radius: 6px; font-family: inherit; font-size: 0.84rem; width: 100%; margin-bottom: 8px; }
     button { background: #238636; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.84rem; font-family: inherit; width: 100%; transition: background 0.15s; }
     button:hover { background: #2ea043; }
@@ -40,222 +39,210 @@
     button.danger-btn:hover { background: #dc2626; }
     button.secondary-btn { background: #21262d; border: 1px solid #30363d; color: #e6edf3; }
     button.secondary-btn:hover { background: #30363d; }
-    .full-width { grid-column: 1 / -1; }
-    .market-item { padding: 10px; border-bottom: 1px solid #21262d; font-size: 0.82rem; }
-    .market-item:last-child { border-bottom: none; }
-    .market-meta { color: #8b949e; font-size: 0.74rem; margin-top: 3px; }
-    .vol { color: #58a6ff; }
-    .empty { color: #8b949e; text-align: center; padding: 24px; font-size: 0.84rem; }
     .search-row { display: flex; gap: 8px; margin-bottom: 12px; }
     .search-row input { margin-bottom: 0; }
     .search-row button { width: auto; padding: 8px 14px; }
     #msg { font-size: 0.8rem; margin-top: 6px; min-height: 18px; }
 
-    /* Live price feed */
-    .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #3fb950; display: inline-block; flex-shrink: 0; }
-    @keyframes livepulse { 0%,100% { opacity: 1; box-shadow: 0 0 0 0 #3fb95066; } 50% { opacity: 0.7; box-shadow: 0 0 0 5px #3fb95000; } }
-    .live-dot { animation: livepulse 1.8s ease-in-out infinite; }
-    @keyframes flash-up { 0% { background: #1a4731; } 100% { background: transparent; } }
-    @keyframes flash-dn { 0% { background: #3d1a1a; } 100% { background: transparent; } }
+    /* ── Badges ───────────────────────────────────────────────────────────── */
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: bold; }
+    .badge-yes  { background: #1a4731; color: #3fb950; }
+    .badge-no   { background: #3d1a1a; color: #f85149; }
+
+    /* ── Tables ───────────────────────────────────────────────────────────── */
+    table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    th { color: #8b949e; text-align: left; padding: 6px 8px; border-bottom: 1px solid #30363d; font-weight: normal; }
+    td { padding: 8px; border-bottom: 1px solid #21262d; }
+    tr:last-child td { border-bottom: none; }
+    .price-cell { font-variant-numeric: tabular-nums; letter-spacing: 0.01em; }
+
+    /* ── P&L & live feed ─────────────────────────────────────────────────── */
+    .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #3fb950; display: inline-block; flex-shrink: 0; animation: livepulse 1.8s ease-in-out infinite; }
+    @keyframes livepulse { 0%,100% { opacity:1; box-shadow:0 0 0 0 #3fb95066; } 50% { opacity:.7; box-shadow:0 0 0 5px #3fb95000; } }
+    @keyframes flash-up { 0% { background:#1a4731; } 100% { background:transparent; } }
+    @keyframes flash-dn { 0% { background:#3d1a1a; } 100% { background:transparent; } }
     .price-up { animation: flash-up 0.8s ease-out; }
     .price-dn { animation: flash-dn 0.8s ease-out; }
     .pnl-badge { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
     .pnl-pos { background: #1a4731; color: #3fb950; }
     .pnl-neg { background: #3d1a1a; color: #f85149; }
-    .pnl-zero { background: #21262d; color: #8b949e; }
-    .price-cell { font-variant-numeric: tabular-nums; letter-spacing: 0.01em; }
     .update-ticker { font-size: 0.68rem; color: #8b949e; margin-left: auto; }
-    .pos-header { display: flex; align-items: center; gap: 8px; }
+    .vol { color: #58a6ff; }
+    .market-item { padding: 10px; border-bottom: 1px solid #21262d; font-size: 0.82rem; }
+    .market-item:last-child { border-bottom: none; }
+    .market-meta { color: #8b949e; font-size: 0.74rem; margin-top: 3px; }
 
-    /* Metric grid */
+    /* ── Shared stat bars (replaces ai-bar-*, rec-bar-*, sig-bar-*) ────────── */
+    .sbar { display: flex; align-items: center; gap: 8px; font-size: 0.72rem; margin-bottom: 5px; }
+    .sbar-label { width: 72px; color: #8b949e; }
+    .sbar-track { flex: 1; background: #21262d; border-radius: 3px; height: 5px; }
+    .sbar-green { background: #3fb950; height: 5px; border-radius: 3px; transition: width 0.4s; }
+    .sbar-red   { background: #f85149; height: 5px; border-radius: 3px; transition: width 0.4s; }
+    .sbar-blue  { background: #1f6feb; height: 5px; border-radius: 3px; transition: width 0.4s; }
+    .sbar-pct { width: 34px; text-align: right; color: #8b949e; }
+
+    /* ── Spinner ──────────────────────────────────────────────────────────── */
+    .spinner { width: 16px; height: 16px; border: 2px solid #30363d; border-top-color: #58a6ff; border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .analyzing { display: flex; align-items: center; gap: 8px; color: #8b949e; font-size: 0.84rem; padding: 16px 0; }
+
+    /* ── Metrics ──────────────────────────────────────────────────────────── */
     .metric-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
     .metric { background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 12px 14px; }
     .metric-label { font-size: 0.68rem; color: #8b949e; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 5px; }
     .metric-value { font-size: 1.35rem; font-weight: bold; color: #58a6ff; }
 
-    /* Platform bars */
+    /* ── Platform breakdown bars ──────────────────────────────────────────── */
     .platform-bar { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #21262d; font-size: 0.82rem; }
     .platform-bar:last-child { border-bottom: none; }
     .platform-name { width: 100px; color: #58a6ff; }
     .bar-track { flex: 1; background: #21262d; border-radius: 4px; height: 6px; }
-    .bar-fill { background: #1f6feb; height: 6px; border-radius: 4px; transition: width 0.4s; }
+    .bar-fill  { background: #1f6feb; height: 6px; border-radius: 4px; transition: width 0.4s; }
     .platform-count { width: 70px; text-align: right; color: #8b949e; }
 
-    /* Win rate ring */
+    /* ── Win rate ring ────────────────────────────────────────────────────── */
     .winrate-ring { display: flex; justify-content: center; padding: 12px 0; }
     svg.ring { transform: rotate(-90deg); }
 
-    /* AI Analysis */
+    /* ── AI Analysis page ─────────────────────────────────────────────────── */
     .ai-result { background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 14px; margin-bottom: 12px; }
     .ai-provider-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; background: #1f3244; color: #58a6ff; margin-right: 6px; }
     .ai-direction { font-size: 1.1rem; font-weight: bold; margin: 8px 0 4px; }
     .ai-reason { font-size: 0.78rem; color: #8b949e; line-height: 1.5; }
-    .ai-bars { margin-top: 10px; }
-    .ai-bar-row { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; margin-bottom: 6px; }
-    .ai-bar-label { width: 80px; color: #8b949e; }
-    .ai-bar-track { flex: 1; background: #21262d; border-radius: 4px; height: 5px; }
-    .ai-bar-fill-conf { background: #3fb950; height: 5px; border-radius: 4px; transition: width 0.4s; }
-    .ai-bar-fill-risk { background: #f85149; height: 5px; border-radius: 4px; transition: width 0.4s; }
-    .ai-bar-pct { width: 36px; text-align: right; color: #8b949e; }
     .provider-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
     .provider-item { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 8px 12px; font-size: 0.78rem; min-width: 130px; }
     .provider-item .p-name { color: #58a6ff; font-weight: bold; margin-bottom: 3px; }
     .provider-item.errored { border-color: #6e2020; opacity: 0.7; }
-    .analyzing { display: flex; align-items: center; gap: 8px; color: #8b949e; font-size: 0.84rem; padding: 16px 0; }
-    .spinner { width: 16px; height: 16px; border: 2px solid #30363d; border-top-color: #58a6ff; border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0; }
-    @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* Risk panel */
+    /* ── Risk ─────────────────────────────────────────────────────────────── */
     .risk-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .risk-card { background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 12px; }
     .risk-card.warning { border-color: #9e6a03; }
-    .risk-card.danger { border-color: #6e2020; }
+    .risk-card.danger  { border-color: #6e2020; }
     .risk-label { font-size: 0.7rem; color: #8b949e; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
     .risk-value { font-size: 1.1rem; font-weight: bold; }
-    .risk-bar-track { background: #21262d; border-radius: 4px; height: 6px; margin-top: 8px; }
-    .risk-bar-fill { height: 6px; border-radius: 4px; transition: width 0.4s; }
 
-    /* Equity curve */
+    /* ── Equity curve ─────────────────────────────────────────────────────── */
     .equity-chart { width: 100%; height: 120px; }
 
-    /* Backtest */
-    .backtest-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
-
-    /* Signal cards */
-    .scanner-status-bar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 10px 14px; background: #0d1117; border: 1px solid #30363d; border-radius: 8px; margin-bottom: 14px; font-size: 0.8rem; }
-    .scanner-status-bar .s-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-    .scanner-status-bar .s-running { background: #3fb950; box-shadow: 0 0 6px #3fb95088; }
-    .scanner-status-bar .s-stopped { background: #8b949e; }
-    .scanner-status-bar .s-label { color: #8b949e; }
-    .scanner-status-bar .s-val { color: #e6edf3; font-weight: bold; }
-    .scanner-status-bar .s-count { background: #1f6feb; color: #fff; padding: 2px 8px; border-radius: 10px; font-weight: bold; font-size: 0.74rem; }
-    .scanner-status-bar .s-refresh { margin-left: auto; background: transparent; border: 1px solid #30363d; color: #8b949e; padding: 4px 12px; border-radius: 6px; width: auto; font-size: 0.75rem; }
-    .scanner-status-bar .s-refresh:hover { border-color: #58a6ff; color: #58a6ff; background: transparent; }
+    /* ── Signals page ─────────────────────────────────────────────────────── */
+    .scanner-bar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 10px 14px; background: #0d1117; border: 1px solid #30363d; border-radius: 8px; margin-bottom: 14px; font-size: 0.8rem; }
+    .scanner-bar .s-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .s-running { background: #3fb950; box-shadow: 0 0 6px #3fb95088; }
+    .s-stopped { background: #8b949e; }
+    .scanner-bar .s-label { color: #8b949e; }
+    .scanner-bar .s-val   { color: #e6edf3; font-weight: bold; }
+    .scanner-bar .s-count { background: #1f6feb; color: #fff; padding: 2px 8px; border-radius: 10px; font-weight: bold; font-size: 0.74rem; }
+    .scanner-bar .s-btn   { margin-left: auto; background: transparent; border: 1px solid #30363d; color: #8b949e; padding: 4px 12px; border-radius: 6px; width: auto; font-size: 0.75rem; cursor: pointer; }
+    .scanner-bar .s-btn:hover { border-color: #58a6ff; color: #58a6ff; }
+    .no-key-notice { background: #1a1400; border: 1px solid #9e6a03; border-radius: 8px; padding: 14px 16px; font-size: 0.82rem; color: #e3b341; margin-bottom: 12px; line-height: 1.6; }
     .signals-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 12px; }
-    .signal-card { background: #0d1117; border-radius: 8px; padding: 14px; border: 1px solid #30363d; position: relative; transition: border-color 0.2s; }
-    .signal-card.sig-buy { border-left: 3px solid #3fb950; }
-    .signal-card.sig-sell { border-left: 3px solid #f85149; }
-    .signal-card.sig-hold { border-left: 3px solid #e3b341; }
-    .signal-card.sig-high { box-shadow: 0 0 10px #3fb95022; }
-    @keyframes sigpulse { 0%,100% { box-shadow: 0 0 6px #3fb95033; } 50% { box-shadow: 0 0 16px #3fb95066; } }
-    .signal-card.sig-high.sig-buy { animation: sigpulse 2.5s ease-in-out infinite; }
-    .signal-card-top { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
-    .sig-dir-badge { padding: 3px 10px; border-radius: 4px; font-size: 0.72rem; font-weight: bold; flex-shrink: 0; }
-    .sig-dir-buy { background: #1a4731; color: #3fb950; }
-    .sig-dir-sell { background: #3d1a1a; color: #f85149; }
-    .sig-dir-hold { background: #2d2a1a; color: #e3b341; }
-    .sig-conf { font-size: 1.3rem; font-weight: bold; line-height: 1; margin-left: auto; }
-    .sig-conf-green { color: #3fb950; }
-    .sig-conf-yellow { color: #e3b341; }
-    .sig-market { font-size: 0.82rem; color: #e6edf3; margin-bottom: 4px; line-height: 1.4; font-weight: bold; }
+    .sig-card { background: #0d1117; border-radius: 8px; padding: 14px; border: 1px solid #30363d; }
+    .sig-card.sig-buy  { border-left: 3px solid #3fb950; }
+    .sig-card.sig-sell { border-left: 3px solid #f85149; }
+    .sig-card.sig-hold { border-left: 3px solid #e3b341; }
+    @keyframes sigpulse { 0%,100% { box-shadow:0 0 6px #3fb95033; } 50% { box-shadow:0 0 16px #3fb95066; } }
+    .sig-card.sig-high.sig-buy { animation: sigpulse 2.5s ease-in-out infinite; }
+    .sig-top { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+    .sig-dir  { padding: 3px 10px; border-radius: 4px; font-size: 0.72rem; font-weight: bold; flex-shrink: 0; }
+    .dir-buy  { background: #1a4731; color: #3fb950; }
+    .dir-sell { background: #3d1a1a; color: #f85149; }
+    .dir-hold { background: #2d2a1a; color: #e3b341; }
+    .sig-pct  { font-size: 1.3rem; font-weight: bold; line-height: 1; margin-left: auto; color: #3fb950; }
+    .sig-pct.yellow { color: #e3b341; }
+    .sig-market { font-size: 0.82rem; color: #e6edf3; font-weight: bold; line-height: 1.4; margin-bottom: 4px; }
     .sig-reason { font-size: 0.74rem; color: #8b949e; line-height: 1.45; margin-bottom: 10px; }
-    .sig-meta { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
-    .sig-meta-tag { background: #161b22; border: 1px solid #30363d; color: #8b949e; padding: 1px 7px; border-radius: 4px; font-size: 0.68rem; }
-    .sig-bar-row { display: flex; align-items: center; gap: 8px; font-size: 0.72rem; margin-bottom: 5px; }
-    .sig-bar-label { width: 70px; color: #8b949e; }
-    .sig-bar-track { flex: 1; background: #21262d; border-radius: 3px; height: 4px; }
-    .sig-bar-fill-conf { height: 4px; border-radius: 3px; }
-    .sig-bar-fill-risk { background: #f85149; height: 4px; border-radius: 3px; }
-    .sig-bar-pct { width: 32px; text-align: right; color: #8b949e; }
+    .sig-meta { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+    .sig-tag  { background: #161b22; border: 1px solid #30363d; color: #8b949e; padding: 1px 7px; border-radius: 4px; font-size: 0.68rem; }
     .sig-actions { display: flex; gap: 8px; margin-top: 12px; }
     .sig-trade-btn { flex: 1; padding: 7px 12px; border-radius: 6px; font-size: 0.78rem; border: none; cursor: pointer; font-family: inherit; font-weight: bold; transition: background 0.15s; }
-    .sig-trade-buy { background: #238636; color: #fff; }
-    .sig-trade-buy:hover { background: #2ea043; }
+    .sig-trade-buy  { background: #238636; color: #fff; }
+    .sig-trade-buy:hover  { background: #2ea043; }
     .sig-trade-sell { background: #b91c1c; color: #fff; }
     .sig-trade-sell:hover { background: #dc2626; }
-    .sig-analyze-btn { padding: 7px 12px; border-radius: 6px; font-size: 0.78rem; border: 1px solid #30363d; color: #8b949e; background: transparent; cursor: pointer; font-family: inherit; width: auto; transition: all 0.15s; }
-    .sig-analyze-btn:hover { border-color: #58a6ff; color: #58a6ff; background: transparent; }
+    .sig-detail-btn { padding: 7px 12px; border-radius: 6px; font-size: 0.78rem; border: 1px solid #30363d; color: #8b949e; background: transparent; cursor: pointer; font-family: inherit; width: auto; transition: all 0.15s; }
+    .sig-detail-btn:hover { border-color: #58a6ff; color: #58a6ff; }
     .sig-time { font-size: 0.68rem; color: #8b949e; margin-top: 8px; }
-    .sig-nav-badge { background: #1f6feb; color: #fff; border-radius: 8px; padding: 0px 5px; font-size: 0.65rem; font-weight: bold; margin-left: 4px; vertical-align: middle; display: inline-block; line-height: 1.4; }
-    .sig-no-key-notice { background: #1a1400; border: 1px solid #9e6a03; border-radius: 8px; padding: 14px 16px; font-size: 0.82rem; color: #e3b341; margin-bottom: 12px; line-height: 1.6; }
+    .sig-nav-badge { background: #1f6feb; color: #fff; border-radius: 8px; padding: 0 5px; font-size: 0.65rem; font-weight: bold; margin-left: 4px; vertical-align: middle; display: inline-block; line-height: 1.4; }
 
-    /* ─── REKOMENDASI PAGE ─────────────────────────────────────────────────── */
-    .rec-toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; padding: 12px 16px; background: #161b22; border-bottom: 1px solid #30363d; }
-    .rec-toolbar select, .rec-toolbar input { width: auto; margin-bottom: 0; flex: 1; min-width: 140px; max-width: 220px; }
-    .rec-toolbar button { width: auto; padding: 8px 16px; }
-    .rec-toolbar .rec-count { margin-left: auto; font-size: 0.76rem; color: #8b949e; white-space: nowrap; }
+    /* ── Rekomendasi page ─────────────────────────────────────────────────── */
+    .rec-toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 12px 16px; background: #161b22; border-bottom: 1px solid #30363d; }
+    .rec-toolbar select, .rec-toolbar input { width: auto; margin-bottom: 0; flex: 1; min-width: 130px; max-width: 200px; }
+    .rec-toolbar button { width: auto; padding: 8px 14px; }
+    .rec-count { margin-left: auto; font-size: 0.76rem; color: #8b949e; white-space: nowrap; }
+    .auto-scan-bar { display: flex; align-items: center; gap: 8px; padding: 8px 16px; font-size: 0.78rem; color: #8b949e; min-height: 36px; background: #0d1117; border-bottom: 1px solid #21262d; }
     .rec-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 14px; padding: 16px; }
 
-    /* Market Recommendation Card */
+    /* Recommendation card */
     .rec-card { background: #161b22; border: 1px solid #30363d; border-radius: 10px; overflow: hidden; transition: border-color 0.2s; }
     .rec-card:hover { border-color: #58a6ff44; }
     .rec-card-header { padding: 14px 16px 10px; }
-    .rec-card-top { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px; }
-    .rec-platform-badge { padding: 2px 8px; border-radius: 4px; font-size: 0.68rem; font-weight: bold; flex-shrink: 0; text-transform: uppercase; }
-    .rec-plat-manifold { background: #1a2840; color: #58a6ff; }
-    .rec-plat-kalshi   { background: #1a3020; color: #3fb950; }
-    .rec-plat-polymarket { background: #2a1a40; color: #a78bfa; }
-    .rec-cat-badge { padding: 2px 7px; border-radius: 4px; font-size: 0.67rem; background: #21262d; color: #8b949e; }
+    .rec-card-top { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .plat-badge { padding: 2px 8px; border-radius: 4px; font-size: 0.68rem; font-weight: bold; text-transform: uppercase; }
+    .plat-manifold { background: #1a2840; color: #58a6ff; }
+    .plat-kalshi   { background: #1a3020; color: #3fb950; }
+    .cat-badge { padding: 2px 7px; border-radius: 4px; font-size: 0.67rem; background: #21262d; color: #8b949e; }
     .rec-question { font-size: 0.85rem; color: #e6edf3; line-height: 1.45; font-weight: bold; margin-bottom: 10px; }
     .rec-price-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
     .rec-price-label { font-size: 0.7rem; color: #8b949e; }
-    .rec-price-bar-track { flex: 1; background: #21262d; border-radius: 4px; height: 8px; position: relative; overflow: hidden; }
-    .rec-price-bar-yes { height: 8px; border-radius: 4px 0 0 4px; background: #238636; transition: width 0.4s; }
-    .rec-price-val { font-size: 0.88rem; font-weight: bold; color: #3fb950; min-width: 38px; text-align: right; }
+    .rec-price-bar { flex: 1; background: #21262d; border-radius: 4px; height: 8px; overflow: hidden; }
+    .rec-price-fill { height: 8px; border-radius: 4px 0 0 4px; transition: width 0.4s; }
+    .rec-price-val { font-size: 0.88rem; font-weight: bold; min-width: 38px; text-align: right; }
     .rec-vol { font-size: 0.72rem; color: #8b949e; }
 
-    /* Analysis section (inside the card, revealed after clicking Analyze) */
-    .rec-analyze-btn { display: flex; align-items: center; gap: 6px; background: transparent; border: 1px solid #30363d; color: #8b949e; padding: 7px 14px; border-radius: 6px; font-size: 0.78rem; width: 100%; justify-content: center; cursor: pointer; font-family: inherit; transition: all 0.15s; margin: 0 16px 14px; width: calc(100% - 32px); }
-    .rec-analyze-btn:hover { border-color: #58a6ff; color: #58a6ff; background: transparent; }
-    .rec-analyze-btn.loading { border-color: #30363d; color: #58a6ff; cursor: default; }
-
+    /* Analysis & execute panels */
+    .rec-analyze-btn { display: flex; align-items: center; justify-content: center; gap: 6px; background: transparent; border: 1px solid #30363d; color: #8b949e; padding: 7px 14px; border-radius: 6px; font-size: 0.78rem; cursor: pointer; font-family: inherit; transition: all 0.15s; margin: 0 16px 14px; width: calc(100% - 32px); }
+    .rec-analyze-btn:hover:not(:disabled) { border-color: #58a6ff; color: #58a6ff; }
+    .rec-analyze-btn:disabled { cursor: default; color: #58a6ff; }
     .rec-analysis { border-top: 1px solid #21262d; padding: 14px 16px; background: #0d1117; display: none; }
     .rec-analysis.visible { display: block; }
     .rec-ai-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
-    .rec-direction-badge { padding: 4px 12px; border-radius: 6px; font-size: 0.82rem; font-weight: bold; }
+    .rec-dir-badge { padding: 4px 12px; border-radius: 6px; font-size: 0.82rem; font-weight: bold; }
     .rec-dir-buy  { background: #1a4731; color: #3fb950; }
     .rec-dir-sell { background: #3d1a1a; color: #f85149; }
     .rec-dir-hold { background: #2d2a1a; color: #e3b341; }
     .rec-conf-num { font-size: 1.2rem; font-weight: bold; margin-left: auto; }
     .rec-reason { font-size: 0.76rem; color: #8b949e; line-height: 1.5; margin-bottom: 10px; }
-    .rec-bars { margin-bottom: 12px; }
-    .rec-bar-row { display: flex; align-items: center; gap: 8px; font-size: 0.72rem; margin-bottom: 5px; }
-    .rec-bar-label { width: 72px; color: #8b949e; }
-    .rec-bar-track { flex: 1; background: #21262d; border-radius: 3px; height: 5px; }
-    .rec-bar-conf { background: #3fb950; height: 5px; border-radius: 3px; transition: width 0.4s; }
-    .rec-bar-risk { background: #f85149; height: 5px; border-radius: 3px; transition: width 0.4s; }
-    .rec-bar-pct { width: 34px; text-align: right; color: #8b949e; }
-
-    /* Execute form inside the card */
     .rec-execute { border-top: 1px solid #21262d; padding: 14px 16px; background: #0a0f14; display: none; }
     .rec-execute.visible { display: block; }
     .rec-execute-title { font-size: 0.72rem; color: #8b949e; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
     .rec-exec-row { display: flex; gap: 8px; margin-bottom: 8px; }
     .rec-exec-row input { margin-bottom: 0; flex: 1; }
     .rec-exec-btns { display: flex; gap: 8px; }
-    .rec-exec-yes { background: #238636; color: #fff; border: none; flex: 1; padding: 9px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: bold; cursor: pointer; font-family: inherit; transition: background 0.15s; }
-    .rec-exec-yes:hover { background: #2ea043; }
-    .rec-exec-no  { background: #b91c1c; color: #fff; border: none; flex: 1; padding: 9px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: bold; cursor: pointer; font-family: inherit; transition: background 0.15s; }
-    .rec-exec-no:hover { background: #dc2626; }
+    .btn-yes { background: #238636; color: #fff; border: none; flex: 1; padding: 9px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: bold; cursor: pointer; font-family: inherit; transition: background 0.15s; }
+    .btn-yes:hover { background: #2ea043; }
+    .btn-no  { background: #b91c1c; color: #fff; border: none; flex: 1; padding: 9px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: bold; cursor: pointer; font-family: inherit; transition: background 0.15s; }
+    .btn-no:hover { background: #dc2626; }
     .rec-exec-msg { font-size: 0.76rem; margin-top: 8px; min-height: 18px; }
 
-    /* Toast notification */
+    /* ── Toast ────────────────────────────────────────────────────────────── */
     #toast { position: fixed; bottom: 24px; right: 24px; background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 12px 18px; font-size: 0.82rem; color: #e6edf3; z-index: 9999; opacity: 0; transform: translateY(10px); transition: all 0.25s; pointer-events: none; max-width: 340px; }
     #toast.show { opacity: 1; transform: translateY(0); }
-    #toast.toast-ok { border-color: #238636; color: #3fb950; }
+    #toast.toast-ok  { border-color: #238636; color: #3fb950; }
     #toast.toast-err { border-color: #b91c1c; color: #f85149; }
   </style>
 </head>
 <body>
 <div id="toast"></div>
+
 <header>
   <span class="status-dot" id="statusDot"></span>
   <h1>CloddsBot</h1>
   <span id="statusText" style="color:#8b949e;font-size:0.78rem;">Connecting...</span>
   <span id="killBadge" style="display:none;background:#6e2020;color:#f85149;padding:2px 10px;border-radius:4px;font-size:0.72rem;">KILL SWITCH ON</span>
   <nav>
-    <button class="active" onclick="showPage('dashboard',this)">Dashboard</button>
-    <button onclick="showPage('recommend',this)" id="navRecommend">Rekomendasi</button>
-    <button onclick="showPage('signals',this)" id="navSignals">Signals</button>
-    <button onclick="showPage('ai',this)">AI Analysis</button>
-    <button onclick="showPage('risk',this)">Risk</button>
-    <button onclick="showPage('analytics',this)">Analytics</button>
-    <button onclick="showPage('backtest',this)">Backtest</button>
-    <button onclick="showPage('markets',this)">Markets</button>
+    <button id="navDash"      class="active" onclick="showPage('dashboard',this)">Dashboard</button>
+    <button id="navRecommend"              onclick="showPage('recommend',this)">Rekomendasi</button>
+    <button id="navSignals"                onclick="showPage('signals',this)">Signals</button>
+    <button id="navAI"                     onclick="showPage('ai',this)">AI Analysis</button>
+    <button id="navRisk"                   onclick="showPage('risk',this)">Risk</button>
+    <button id="navAnalytics"              onclick="showPage('analytics',this)">Analytics</button>
+    <button id="navBacktest"               onclick="showPage('backtest',this)">Backtest</button>
+    <button id="navMarkets"                onclick="showPage('markets',this)">Markets</button>
   </nav>
 </header>
 
-<!-- DASHBOARD -->
+<!-- ── DASHBOARD ──────────────────────────────────────────────────────────── -->
 <div id="page-dashboard" class="page active">
   <div class="container">
     <div class="card">
@@ -275,19 +262,18 @@
         <option value="YES">YES (Long)</option>
         <option value="NO">NO (Short)</option>
       </select>
-      <input type="number" id="tradeSize" placeholder="Size ($)" min="1" />
-      <input type="number" id="tradeStopLoss" placeholder="Stop Loss price (optional)" step="0.01" />
-      <input type="number" id="tradeTakeProfit" placeholder="Take Profit price (optional)" step="0.01" />
+      <input type="number" id="tradeSize" placeholder="Size ($) — kosong = Kelly otomatis" min="1" />
+      <input type="number" id="tradeStopLoss" placeholder="Stop Loss (opsional)" step="0.01" />
+      <input type="number" id="tradeTakeProfit" placeholder="Take Profit (opsional)" step="0.01" />
       <button id="tradeBtn" onclick="placeTrade()">Execute Order</button>
       <div id="msg"></div>
-      <div id="tradeAIResult"></div>
     </div>
 
     <div class="card full-width">
-      <h2 style="display:flex;align-items:center;gap:8px;">
+      <h2>
         Open Positions
-        <span class="live-dot" title="Live price feed active"></span>
-        <span style="font-size:0.68rem;font-weight:normal;color:#8b949e;">prices update every 4s</span>
+        <span class="live-dot" title="Live price feed"></span>
+        <span style="font-size:0.68rem;font-weight:normal;color:#8b949e;">update setiap 4s</span>
         <span class="update-ticker" id="lastUpdateTime"></span>
       </h2>
       <div id="positionsTable"><div class="empty">No open positions</div></div>
@@ -295,7 +281,7 @@
   </div>
 </div>
 
-<!-- REKOMENDASI -->
+<!-- ── REKOMENDASI ────────────────────────────────────────────────────────── -->
 <div id="page-recommend" class="page">
   <div class="rec-toolbar">
     <select id="recCategory" onchange="loadRecommendations()">
@@ -313,41 +299,42 @@
       <option value="kalshi">Kalshi</option>
     </select>
     <input type="text" id="recSearch" placeholder="Cari market..." onkeydown="if(event.key==='Enter')loadRecommendations()" />
-    <button onclick="loadRecommendations()" style="width:auto;padding:8px 16px;">Cari</button>
+    <button onclick="loadRecommendations()">Cari</button>
+    <button id="autoScanBtn" onclick="startAutoScan()" style="background:#1f6feb;">Auto-scan Top 10</button>
     <span class="rec-count" id="recCount"></span>
   </div>
+  <div class="auto-scan-bar" id="autoScanBar"></div>
   <div class="rec-grid" id="recGrid">
     <div class="empty" style="grid-column:1/-1;">Memuat market live...</div>
   </div>
 </div>
 
-<!-- SIGNALS -->
+<!-- ── SIGNALS ────────────────────────────────────────────────────────────── -->
 <div id="page-signals" class="page">
   <div class="container">
     <div class="card full-width">
-      <h2>Opportunity Scanner <span style="font-size:0.7rem;font-weight:normal;color:#8b949e;">AI scans all markets every 10 min · confidence ≥ 75%</span></h2>
-      <div id="scannerStatusBar"><div class="empty">Loading scanner status...</div></div>
-      <div id="noKeyNotice" style="display:none;" class="sig-no-key-notice">
-        No AI provider keys configured — scanner cannot analyze markets without an API key. Set at least one of <strong>GOOGLE_API_KEY</strong>, <strong>GROQ_API_KEY</strong>, <strong>OPENAI_API_KEY</strong>, or <strong>ANTHROPIC_API_KEY</strong> in Replit Secrets, then restart the bot.
+      <h2>Opportunity Scanner <span style="font-size:0.7rem;font-weight:normal;color:#8b949e;">AI scans markets every 10 min · confidence ≥ 75%</span></h2>
+      <div id="scannerStatusBar"><div class="empty">Loading...</div></div>
+      <div id="noKeyNotice" style="display:none;" class="no-key-notice">
+        No AI provider keys configured. Set <strong>GOOGLE_API_KEY</strong>, <strong>GROQ_API_KEY</strong>, <strong>OPENAI_API_KEY</strong>, or <strong>ANTHROPIC_API_KEY</strong> in Replit Secrets, then restart.
       </div>
       <div id="signalsGrid"><div class="empty">Waiting for scanner results...</div></div>
     </div>
   </div>
 </div>
 
-<!-- AI ANALYSIS -->
+<!-- ── AI ANALYSIS ────────────────────────────────────────────────────────── -->
 <div id="page-ai" class="page">
   <div class="container">
     <div class="card full-width">
       <h2>AI Consensus Analysis</h2>
       <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
-        <input type="text" id="aiMarket" placeholder="Market to analyze (e.g. trump-2028)" style="margin-bottom:0;flex:1;" />
+        <input type="text" id="aiMarket" placeholder="Market to analyze" style="margin-bottom:0;flex:1;" />
         <input type="text" id="aiContext" placeholder="Extra context (optional)" style="margin-bottom:0;flex:1;" />
         <button onclick="runAnalysis()" style="width:auto;padding:8px 16px;">Analyze</button>
       </div>
       <div id="aiResult"><div class="empty">Enter a market name and click Analyze</div></div>
     </div>
-
     <div class="card full-width">
       <h2>AI Providers</h2>
       <div id="providerStatus"><div class="empty">Loading...</div></div>
@@ -355,27 +342,26 @@
   </div>
 </div>
 
-<!-- RISK -->
+<!-- ── RISK ───────────────────────────────────────────────────────────────── -->
 <div id="page-risk" class="page">
   <div class="container">
     <div class="card full-width">
       <h2>Risk Status</h2>
       <div id="riskPanel"><div class="empty">Loading...</div></div>
     </div>
-
     <div class="card full-width">
       <h2>Kill Switch</h2>
-      <p style="font-size:0.83rem;color:#8b949e;margin-bottom:12px;">Instantly halt all new trades for today. Reset automatically next day.</p>
+      <p style="font-size:0.83rem;color:#8b949e;margin-bottom:12px;">Instantly halt all new trades for today. Resets automatically next day.</p>
       <div style="display:flex;gap:10px;">
-        <button class="danger-btn" onclick="setKillSwitch(true)" style="width:auto;padding:8px 20px;">Enable Kill Switch</button>
-        <button class="secondary-btn" onclick="setKillSwitch(false)" style="width:auto;padding:8px 20px;">Disable Kill Switch</button>
+        <button class="danger-btn" onclick="setKillSwitch(true)"  style="width:auto;padding:8px 20px;">Enable</button>
+        <button class="secondary-btn" onclick="setKillSwitch(false)" style="width:auto;padding:8px 20px;">Disable</button>
       </div>
       <div id="killMsg" style="margin-top:10px;font-size:0.8rem;"></div>
     </div>
   </div>
 </div>
 
-<!-- ANALYTICS -->
+<!-- ── ANALYTICS ──────────────────────────────────────────────────────────── -->
 <div id="page-analytics" class="page">
   <div class="container">
     <div class="card full-width">
@@ -415,7 +401,7 @@
   </div>
 </div>
 
-<!-- BACKTEST -->
+<!-- ── BACKTEST ────────────────────────────────────────────────────────────── -->
 <div id="page-backtest" class="page">
   <div class="container">
     <div class="card full-width">
@@ -426,7 +412,7 @@
   </div>
 </div>
 
-<!-- MARKETS -->
+<!-- ── MARKETS ────────────────────────────────────────────────────────────── -->
 <div id="page-markets" class="page">
   <div class="container">
     <div class="card full-width">
@@ -452,142 +438,142 @@
 </div>
 
 <script>
-// ─── Navigation ──────────────────────────────────────────────────────────────
-function showPage(name, btn) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
-  document.getElementById('page-' + name).classList.add('active');
-  btn.classList.add('active');
-  if (name === 'analytics')  fetchAnalytics();
-  if (name === 'markets')    fetchTrending();
-  if (name === 'risk')       fetchRisk();
-  if (name === 'ai')         fetchProviders();
-  if (name === 'backtest')   runBacktest();
-  if (name === 'signals')    fetchSignals();
-  if (name === 'recommend')  loadRecommendations();
-}
+'use strict';
 
-// ─── Toast ───────────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const fmtPnL = v => { const n = parseFloat(v)||0; return (n>=0?'+':'')+`$${Math.abs(n).toFixed(2)}`; };
+const fmtVol = v => v >= 1e6 ? `${(v/1e6).toFixed(1)}M` : v >= 1e3 ? `${(v/1e3).toFixed(0)}K` : `${(v||0).toFixed(0)}`;
+const pColor = p => p >= 0.6 ? '#3fb950' : p >= 0.4 ? '#e3b341' : '#f85149';
+const sleep  = ms => new Promise(r => setTimeout(r, ms));
+const post   = (url, body) => fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)}).then(r => r.json());
+
+// Render two stat bars (confidence / risk) as shared HTML
+const barRows = (conf, risk) => `
+  <div class="sbar"><span class="sbar-label">Confidence</span><div class="sbar-track"><div class="sbar-green" style="width:${conf}%"></div></div><span class="sbar-pct">${conf}%</span></div>
+  <div class="sbar"><span class="sbar-label">Risiko</span><div class="sbar-track"><div class="sbar-red" style="width:${risk}%"></div></div><span class="sbar-pct">${risk}%</span></div>`;
+
 let toastTimer;
 function showToast(msg, type = 'ok') {
-  const t = document.getElementById('toast');
+  const t = $('toast');
   t.textContent = msg;
-  t.className = 'show toast-' + type;
+  t.className = `show toast-${type}`;
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { t.className = ''; }, 3500);
 }
 
-// ─── Status ──────────────────────────────────────────────────────────────────
+// ── Navigation ────────────────────────────────────────────────────────────────
+const pageActions = {
+  analytics: fetchAnalytics,
+  markets:   fetchTrending,
+  risk:      fetchRisk,
+  ai:        fetchProviders,
+  backtest:  runBacktest,
+  signals:   fetchSignals,
+  recommend: loadRecommendations,
+};
+
+function showPage(name, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  $('page-' + name).classList.add('active');
+  btn.classList.add('active');
+  pageActions[name]?.();
+}
+
+// ── Status ────────────────────────────────────────────────────────────────────
 async function fetchStatus() {
   try {
-    const res = await fetch('/api/status');
-    const data = await res.json();
-    document.getElementById('statusDot').style.background = data.status === 'running' ? '#3fb950' : '#f85149';
-    document.getElementById('statusText').textContent = data.status === 'running' ? 'Running' : 'Stopped';
-    document.getElementById('botStatus').textContent = data.isActive ? 'Active' : 'Inactive';
-    document.getElementById('posCount').textContent = data.positions?.count ?? 0;
-    document.getElementById('totalValue').textContent = '$' + (data.positions?.totalValue || 0).toFixed(2);
-    const pnl = data.positions?.unrealizedPnl || 0;
-    const pnlEl = document.getElementById('unrealizedPnl');
+    const d = await fetch('/api/status').then(r => r.json());
+    const running = d.status === 'running';
+    $('statusDot').style.background  = running ? '#3fb950' : '#f85149';
+    $('statusText').textContent       = running ? 'Running' : 'Stopped';
+    $('botStatus').textContent        = d.isActive ? 'Active' : 'Inactive';
+    $('posCount').textContent         = d.positions?.count ?? 0;
+    $('totalValue').textContent       = `$${(d.positions?.totalValue || 0).toFixed(2)}`;
+    const pnl = d.positions?.unrealizedPnl || 0;
+    const pnlEl = $('unrealizedPnl');
     pnlEl.textContent = fmtPnL(pnl);
-    pnlEl.className = 'stat-val ' + (pnl >= 0 ? 'positive' : 'negative');
-    document.getElementById('dailyTrades').textContent = data.dailyTrades ?? 0;
-    const dpnl = data.dailyPnL || 0;
-    const dpnlEl = document.getElementById('dailyPnl');
+    pnlEl.className   = 'stat-val ' + (pnl >= 0 ? 'positive' : 'negative');
+    $('dailyTrades').textContent = d.dailyTrades ?? 0;
+    const dpnl = d.dailyPnL || 0;
+    const dpnlEl = $('dailyPnl');
     dpnlEl.textContent = fmtPnL(dpnl);
-    dpnlEl.className = 'stat-val ' + (dpnl >= 0 ? 'positive' : 'negative');
-    const ks = data.riskStatus?.killSwitch;
-    document.getElementById('killBadge').style.display = ks ? 'inline-block' : 'none';
-  } catch(e) {
-    document.getElementById('statusText').textContent = 'Offline';
-    document.getElementById('statusDot').style.background = '#f85149';
+    dpnlEl.className   = 'stat-val ' + (dpnl >= 0 ? 'positive' : 'negative');
+    $('killBadge').style.display = d.riskStatus?.killSwitch ? 'inline-block' : 'none';
+  } catch {
+    $('statusText').textContent = 'Offline';
+    $('statusDot').style.background = '#f85149';
   }
 }
 
-// ─── Live Positions ───────────────────────────────────────────────────────────
+// ── Live Positions ────────────────────────────────────────────────────────────
 let prevPrices = {};
 async function fetchPositions() {
   try {
-    const data = await (await fetch('/api/positions/live')).json();
-    const el = document.getElementById('positionsTable');
-    document.getElementById('lastUpdateTime').textContent = 'Updated ' + new Date().toLocaleTimeString();
-    if (!data || data.length === 0) { el.innerHTML = '<div class="empty">No open positions</div>'; return; }
+    const data = await fetch('/api/positions/live').then(r => r.json());
+    const el = $('positionsTable');
+    $('lastUpdateTime').textContent = 'Updated ' + new Date().toLocaleTimeString();
+    if (!data?.length) { el.innerHTML = '<div class="empty">No open positions</div>'; return; }
     el.innerHTML = `<table><thead><tr>
-      <th>Market</th><th>Platform</th><th>Side</th><th>Size</th>
-      <th>Entry</th><th>Current</th><th>P&L</th><th>Actions</th>
+      <th>Market</th><th>Platform</th><th>Side</th><th>Size</th><th>Entry</th><th>Current</th><th>P&L</th><th>Actions</th>
     </tr></thead><tbody>${data.map(p => {
-      const pid = p.position?.id || p.id;
-      const mkt = p.position?.market || p.market || '--';
-      const plt = p.position?.platform || p.platform || '--';
-      const side = p.position?.side || p.side || '--';
-      const size = (p.position?.size || p.size || 0).toFixed(2);
+      const pid   = p.position?.id || p.id;
+      const mkt   = p.position?.market || p.market || '--';
+      const plt   = p.position?.platform || p.platform || '--';
+      const side  = p.position?.side || p.side || '--';
+      const size  = (p.position?.size || p.size || 0).toFixed(2);
       const entry = (p.position?.entryPrice || p.entryPrice || 0).toFixed(3);
-      const cur = (p.currentPrice || 0).toFixed(3);
-      const pnl = p.pnl?.pnl || 0;
-      const pnlPct = p.pnl?.pnlPct || 0;
-      const prev = prevPrices[pid];
-      let flashClass = '';
-      if (prev !== undefined) {
-        const curF = parseFloat(cur);
-        if (curF > prev) flashClass = 'price-up';
-        else if (curF < prev) flashClass = 'price-dn';
-      }
+      const cur   = (p.currentPrice || 0).toFixed(3);
+      const pnl   = p.pnl?.pnl || 0;
+      const pnlP  = p.pnl?.pnlPct || 0;
+      const prev  = prevPrices[pid];
+      const flash = prev !== undefined ? (parseFloat(cur) > prev ? 'price-up' : parseFloat(cur) < prev ? 'price-dn' : '') : '';
       prevPrices[pid] = parseFloat(cur);
       const pnlBadge = pnl >= 0
-        ? `<span class="pnl-badge pnl-pos">+$${pnl.toFixed(2)} (${pnlPct.toFixed(1)}%)</span>`
-        : `<span class="pnl-badge pnl-neg">-$${Math.abs(pnl).toFixed(2)} (${pnlPct.toFixed(1)}%)</span>`;
-      const sideB = side === 'YES'
-        ? '<span class="badge badge-yes">YES</span>'
-        : '<span class="badge badge-no">NO</span>';
+        ? `<span class="pnl-badge pnl-pos">+$${pnl.toFixed(2)} (${pnlP.toFixed(1)}%)</span>`
+        : `<span class="pnl-badge pnl-neg">-$${Math.abs(pnl).toFixed(2)} (${pnlP.toFixed(1)}%)</span>`;
+      const sideB = `<span class="badge badge-${side.toLowerCase()}">${side}</span>`;
       return `<tr>
         <td title="${mkt}">${mkt.length > 35 ? mkt.slice(0,34)+'…' : mkt}</td>
         <td>${plt}</td><td>${sideB}</td><td>$${size}</td>
         <td class="price-cell">$${entry}</td>
-        <td class="price-cell ${flashClass}">$${cur}</td>
+        <td class="price-cell ${flash}">$${cur}</td>
         <td>${pnlBadge}</td>
         <td><button class="secondary-btn" style="width:auto;padding:4px 10px;font-size:0.75rem;" onclick="closePosition('${pid}')">Close</button></td>
       </tr>`;
     }).join('')}</tbody></table>`;
-  } catch(e) {}
+  } catch {}
 }
 
 async function closePosition(id) {
   if (!confirm('Close this position?')) return;
   try {
-    const r = await fetch('/api/close', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({positionId: id}) });
-    const d = await r.json();
+    const d = await post('/api/close', {positionId: id});
     if (d.success) { showToast('Position closed', 'ok'); fetchPositions(); fetchStatus(); }
     else showToast(d.error || 'Failed to close', 'err');
-  } catch(e) { showToast('Error closing position', 'err'); }
+  } catch { showToast('Error closing position', 'err'); }
 }
 
-// ─── Place Trade (Dashboard) ──────────────────────────────────────────────────
+// ── Place Trade (Dashboard) ───────────────────────────────────────────────────
 async function placeTrade() {
-  const market = document.getElementById('tradeMarket').value.trim();
-  const side = document.getElementById('tradeSide').value;
-  const size = parseFloat(document.getElementById('tradeSize').value) || 0;
-  const sl = parseFloat(document.getElementById('tradeStopLoss').value) || null;
-  const tp = parseFloat(document.getElementById('tradeTakeProfit').value) || null;
-  const msgEl = document.getElementById('msg');
-  const btn = document.getElementById('tradeBtn');
+  const market = $('tradeMarket').value.trim();
+  const side   = $('tradeSide').value;
+  const size   = parseFloat($('tradeSize').value) || 0;
+  const sl     = parseFloat($('tradeStopLoss').value) || null;
+  const tp     = parseFloat($('tradeTakeProfit').value) || null;
+  const msgEl  = $('msg');
+  const btn    = $('tradeBtn');
   if (!market) { msgEl.style.color = '#f85149'; msgEl.textContent = 'Market name required'; return; }
-  btn.textContent = 'Executing...'; btn.disabled = true;
-  msgEl.textContent = '';
+  btn.textContent = 'Executing...'; btn.disabled = true; msgEl.textContent = '';
   try {
     const body = { market, side, size, useKelly: size === 0 };
     if (sl) body.stopLoss = sl;
     if (tp) body.takeProfit = tp;
-    const r = await fetch('/api/trade', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
-    const d = await r.json();
+    const d = await post('/api/trade', body);
     if (d.success) {
       msgEl.style.color = '#3fb950';
       msgEl.textContent = `✓ Order placed @ $${d.entryPrice?.toFixed(3)} on ${d.platform}`;
-      document.getElementById('tradeAIResult').innerHTML = d.aiAnalysis
-        ? `<div class="ai-result" style="margin-top:10px;">
-            <span class="ai-provider-tag">${d.aiAnalysis.best?.provider || 'AI'}</span>
-            <div class="ai-direction ${d.aiAnalysis.best?.direction === 'YES' ? 'positive' : 'negative'}">${d.aiAnalysis.best?.direction} — ${Math.round((d.aiAnalysis.best?.confidence||0)*100)}% conf</div>
-            <div class="ai-reason">${d.aiAnalysis.best?.reason || ''}</div>
-           </div>` : '';
       showToast(`✓ Trade executed on ${d.platform} @ $${d.entryPrice?.toFixed(3)}`, 'ok');
       fetchPositions(); fetchStatus();
     } else {
@@ -595,463 +581,434 @@ async function placeTrade() {
       msgEl.textContent = d.error || 'Trade failed';
       showToast(d.error || 'Trade failed', 'err');
     }
-  } catch(e) {
+  } catch {
     msgEl.style.color = '#f85149'; msgEl.textContent = 'Network error';
   } finally {
     btn.textContent = 'Execute Order'; btn.disabled = false;
   }
 }
 
-// ─── REKOMENDASI PAGE ─────────────────────────────────────────────────────────
-let recMarkets = [];
+// ── REKOMENDASI ───────────────────────────────────────────────────────────────
+let recMarkets    = [];
+let autoScanActive = false;
 
 async function loadRecommendations() {
-  const cat = document.getElementById('recCategory').value;
-  const plat = document.getElementById('recPlatform').value;
-  const q = document.getElementById('recSearch').value.trim();
-  const grid = document.getElementById('recGrid');
+  stopAutoScan();
+  const cat  = $('recCategory').value;
+  const plat = $('recPlatform').value;
+  const q    = $('recSearch').value.trim();
+  const grid = $('recGrid');
   grid.innerHTML = '<div class="empty" style="grid-column:1/-1;"><div class="analyzing"><div class="spinner"></div>Memuat market live...</div></div>';
-
+  $('autoScanBar').innerHTML = '';
   try {
     const params = new URLSearchParams();
-    if (q) params.set('q', q);
+    if (q)   params.set('q', q);
     if (cat) params.set('category', cat);
-    const r = await fetch('/api/markets/search?' + params.toString());
-    let markets = await r.json();
-
-    // Filter by platform client-side if selected
+    let markets = await fetch('/api/markets/search?' + params).then(r => r.json());
     if (plat) markets = markets.filter(m => m.platform === plat);
-
-    // Sort by volume descending
     markets.sort((a, b) => (b.volume || 0) - (a.volume || 0));
-
     recMarkets = markets;
-    document.getElementById('recCount').textContent = markets.length + ' market ditemukan';
-
-    if (!markets.length) {
-      grid.innerHTML = '<div class="empty" style="grid-column:1/-1;">Tidak ada market yang cocok</div>';
-      return;
-    }
-
+    $('recCount').textContent = `${markets.length} market ditemukan`;
+    if (!markets.length) { grid.innerHTML = '<div class="empty" style="grid-column:1/-1;">Tidak ada market yang cocok</div>'; return; }
     grid.innerHTML = markets.map((m, i) => renderRecCard(m, i)).join('');
-  } catch(e) {
+  } catch {
     grid.innerHTML = '<div class="empty" style="grid-column:1/-1;">Gagal memuat market</div>';
   }
 }
 
-function renderRecCard(m, idx) {
-  const price = m.currentPrice || 0;
-  const pricePct = Math.round(price * 100);
-  const noPrice = 100 - pricePct;
-  const priceColor = price >= 0.6 ? '#3fb950' : price >= 0.4 ? '#e3b341' : '#f85149';
-  const platClass = m.platform === 'manifold' ? 'rec-plat-manifold' : m.platform === 'kalshi' ? 'rec-plat-kalshi' : 'rec-plat-polymarket';
-  const vol = m.volume >= 1000000 ? (m.volume/1000000).toFixed(1)+'M' : m.volume >= 1000 ? (m.volume/1000).toFixed(0)+'K' : (m.volume||0).toFixed(0);
-  const endStr = m.endDate ? ' · Tutup ' + m.endDate : '';
-  const safeQ = m.question.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-
-  return `<div class="rec-card" id="rec-card-${idx}">
+function renderRecCard(m, i) {
+  const price  = m.currentPrice || 0;
+  const pct    = Math.round(price * 100);
+  const col    = pColor(price);
+  const plat   = m.platform === 'manifold' ? 'plat-manifold' : 'plat-kalshi';
+  const vol    = fmtVol(m.volume);
+  const end    = m.endDate ? ` · Tutup ${m.endDate}` : '';
+  const safeQ  = JSON.stringify(m.question);
+  return `<div class="rec-card" id="rec-card-${i}">
     <div class="rec-card-header">
       <div class="rec-card-top">
-        <span class="rec-platform-badge ${platClass}">${m.platform}</span>
-        <span class="rec-cat-badge">${m.category || 'general'}</span>
+        <span class="plat-badge ${plat}">${m.platform}</span>
+        <span class="cat-badge">${m.category || 'general'}</span>
       </div>
       <div class="rec-question">${m.question.length > 120 ? m.question.slice(0,118)+'…' : m.question}</div>
       <div class="rec-price-row">
         <span class="rec-price-label">YES</span>
-        <div class="rec-price-bar-track">
-          <div class="rec-price-bar-yes" style="width:${pricePct}%;background:${priceColor};"></div>
-        </div>
-        <span class="rec-price-val" style="color:${priceColor};">${pricePct}¢</span>
+        <div class="rec-price-bar"><div class="rec-price-fill" style="width:${pct}%;background:${col};"></div></div>
+        <span class="rec-price-val" style="color:${col};">${pct}¢</span>
       </div>
-      <div class="rec-vol">Volume: <span class="vol">$${vol}</span>${endStr}</div>
+      <div class="rec-vol">Volume: <span class="vol">$${vol}</span>${end}</div>
     </div>
-
-    <button class="rec-analyze-btn" id="rec-btn-${idx}" onclick="analyzeRecCard(${idx}, '${safeQ}')">
+    <button class="rec-analyze-btn" id="rec-btn-${i}" onclick="analyzeRecCard(${i}, ${safeQ})">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
       Analisis AI
     </button>
-
-    <div class="rec-analysis" id="rec-analysis-${idx}"></div>
-    <div class="rec-execute" id="rec-execute-${idx}">
+    <div class="rec-analysis" id="rec-analysis-${i}"></div>
+    <div class="rec-execute" id="rec-execute-${i}">
       <div class="rec-execute-title">Eksekusi Trade</div>
       <div class="rec-exec-row">
-        <input type="number" id="rec-size-${idx}" placeholder="Size ($) — kosong = Kelly otomatis" min="1" step="1" />
-        <input type="number" id="rec-sl-${idx}" placeholder="Stop Loss (opsional)" step="0.01" />
-        <input type="number" id="rec-tp-${idx}" placeholder="Take Profit (opsional)" step="0.01" />
+        <input type="number" id="rec-size-${i}" placeholder="Size ($) — kosong = Kelly" min="1" step="1" />
+        <input type="number" id="rec-sl-${i}"   placeholder="Stop Loss (opsional)" step="0.01" />
+        <input type="number" id="rec-tp-${i}"   placeholder="Take Profit (opsional)" step="0.01" />
       </div>
       <div class="rec-exec-btns">
-        <button class="rec-exec-yes" onclick="execRecTrade(${idx}, '${safeQ}', 'YES')">▲ Beli YES</button>
-        <button class="rec-exec-no"  onclick="execRecTrade(${idx}, '${safeQ}', 'NO')">▼ Beli NO</button>
+        <button class="btn-yes" onclick="execRecTrade(${i}, ${safeQ}, 'YES')">▲ Beli YES</button>
+        <button class="btn-no"  onclick="execRecTrade(${i}, ${safeQ}, 'NO')">▼ Beli NO</button>
       </div>
-      <div class="rec-exec-msg" id="rec-msg-${idx}"></div>
+      <div class="rec-exec-msg" id="rec-msg-${i}"></div>
     </div>
   </div>`;
 }
 
-async function analyzeRecCard(idx, question) {
-  const btn = document.getElementById('rec-btn-' + idx);
-  const analysisEl = document.getElementById('rec-analysis-' + idx);
-  const executeEl = document.getElementById('rec-execute-' + idx);
+async function analyzeRecCard(idx, question, silent = false) {
+  const btn        = $(`rec-btn-${idx}`);
+  const analysisEl = $(`rec-analysis-${idx}`);
+  const executeEl  = $(`rec-execute-${idx}`);
+  if (!btn || !analysisEl) return;
 
-  // Toggle if already shown
-  if (analysisEl.classList.contains('visible')) {
+  // Toggle off if already visible and not in silent/auto-scan mode
+  if (!silent && analysisEl.classList.contains('visible')) {
     analysisEl.classList.remove('visible');
     executeEl.classList.remove('visible');
+    btn.disabled = false;
     btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> Analisis AI`;
     return;
   }
 
-  btn.classList.add('loading');
+  btn.disabled = true;
   btn.innerHTML = `<div class="spinner" style="width:12px;height:12px;border-width:2px;"></div> Menganalisis...`;
   analysisEl.innerHTML = '';
   analysisEl.classList.add('visible');
   executeEl.classList.remove('visible');
 
   try {
-    const r = await fetch('/api/ai/analyze', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ market: question, context: '' })
-    });
-    const d = await r.json();
-
+    const d = await post('/api/ai/analyze', { market: question, context: '' });
     if (!d.success && d.error) {
       analysisEl.innerHTML = `<div style="color:#f85149;font-size:0.78rem;padding:8px 0;">${d.error}</div>`;
-      btn.classList.remove('loading');
+      btn.disabled = false;
       btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> Coba Lagi`;
       return;
     }
-
     const best = d.best || {};
-    const dir = best.direction || 'HOLD';
+    const dir  = best.direction || 'HOLD';
     const conf = Math.round((best.confidence || 0) * 100);
-    const risk = Math.round((best.riskScore || 0) * 100);
-    const dirClass = dir === 'YES' ? 'rec-dir-buy' : dir === 'NO' ? 'rec-dir-sell' : 'rec-dir-hold';
+    const risk = Math.round((best.riskScore  || 0) * 100);
+    const dirClass  = dir === 'YES' ? 'rec-dir-buy' : dir === 'NO' ? 'rec-dir-sell' : 'rec-dir-hold';
     const confColor = conf >= 75 ? '#3fb950' : conf >= 60 ? '#e3b341' : '#f85149';
-    const providers = d.providers || [];
-    const provHTML = providers.filter(p => !p.error).map(p =>
+    const dirLabel  = dir === 'YES' ? '▲ BELI YES' : dir === 'NO' ? '▼ BELI NO' : '⏸ TAHAN';
+    const provHTML  = (d.providers || []).filter(p => !p.error).map(p =>
       `<span style="background:#0d1117;border:1px solid #30363d;border-radius:4px;padding:2px 7px;font-size:0.68rem;color:#8b949e;">
         <span style="color:#58a6ff;">${p.provider}</span> ${p.direction} ${Math.round(p.confidence*100)}%
-      </span>`
-    ).join('');
-
+      </span>`).join('');
     analysisEl.innerHTML = `
       <div class="rec-ai-header">
-        <span class="rec-direction-badge ${dirClass}">${dir === 'YES' ? '▲ BELI YES' : dir === 'NO' ? '▼ BELI NO' : '⏸ TAHAN'}</span>
-        <span style="font-size:0.7rem;color:#8b949e;">${d.agreingCount || 0}/${d.totalValid || 0} AI setuju</span>
+        <span class="rec-dir-badge ${dirClass}">${dirLabel}</span>
+        <span style="font-size:0.7rem;color:#8b949e;">${d.agreingCount||0}/${d.totalValid||0} AI setuju</span>
         <span class="rec-conf-num" style="color:${confColor};">${conf}%</span>
       </div>
       <div class="rec-reason">${best.reason || 'No analysis available'}</div>
-      <div class="rec-bars">
-        <div class="rec-bar-row">
-          <span class="rec-bar-label">Confidence</span>
-          <div class="rec-bar-track"><div class="rec-bar-conf" style="width:${conf}%;"></div></div>
-          <span class="rec-bar-pct">${conf}%</span>
-        </div>
-        <div class="rec-bar-row">
-          <span class="rec-bar-label">Risiko</span>
-          <div class="rec-bar-track"><div class="rec-bar-risk" style="width:${risk}%;"></div></div>
-          <span class="rec-bar-pct">${risk}%</span>
-        </div>
-      </div>
-      ${provHTML ? `<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:4px;">${provHTML}</div>` : ''}`;
-
-    // Show execute form
+      <div style="margin-bottom:10px;">${barRows(conf, risk)}</div>
+      ${provHTML ? `<div style="display:flex;flex-wrap:wrap;gap:5px;">${provHTML}</div>` : ''}`;
     executeEl.classList.add('visible');
-
-    btn.classList.remove('loading');
-    btn.innerHTML = `▲ Sembunyikan Analisis`;
-
-  } catch(e) {
+    btn.innerHTML = '▲ Sembunyikan';
+  } catch {
     analysisEl.innerHTML = `<div style="color:#f85149;font-size:0.78rem;padding:8px 0;">Gagal terhubung ke AI</div>`;
-    btn.classList.remove('loading');
     btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> Coba Lagi`;
+  } finally {
+    btn.disabled = false;
   }
 }
 
 async function execRecTrade(idx, question, side) {
-  const sizeEl = document.getElementById('rec-size-' + idx);
-  const slEl   = document.getElementById('rec-sl-' + idx);
-  const tpEl   = document.getElementById('rec-tp-' + idx);
-  const msgEl  = document.getElementById('rec-msg-' + idx);
-  const size = parseFloat(sizeEl.value) || 0;
-  const sl = parseFloat(slEl.value) || null;
-  const tp = parseFloat(tpEl.value) || null;
-
+  const size  = parseFloat($(`rec-size-${idx}`)?.value) || 0;
+  const sl    = parseFloat($(`rec-sl-${idx}`)?.value)   || null;
+  const tp    = parseFloat($(`rec-tp-${idx}`)?.value)   || null;
+  const msgEl = $(`rec-msg-${idx}`);
   msgEl.style.color = '#8b949e';
   msgEl.textContent = 'Mengeksekusi...';
-
   try {
     const body = { market: question, side, size, useKelly: size === 0 };
     if (sl) body.stopLoss = sl;
     if (tp) body.takeProfit = tp;
-    const r = await fetch('/api/trade', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify(body)
-    });
-    const d = await r.json();
+    const d = await post('/api/trade', body);
     if (d.success) {
       msgEl.style.color = '#3fb950';
       msgEl.textContent = `✓ ${side} berhasil @ $${(d.entryPrice||0).toFixed(3)} di ${d.platform} | Size: $${(d.size||0).toFixed(2)}`;
-      showToast(`✓ ${side} di "${question.slice(0,40)}…" @ $${(d.entryPrice||0).toFixed(3)}`, 'ok');
-      fetchPositions();
-      fetchStatus();
+      showToast(`✓ ${side} "${question.slice(0,40)}…" @ $${(d.entryPrice||0).toFixed(3)}`, 'ok');
+      fetchPositions(); fetchStatus();
     } else {
       msgEl.style.color = '#f85149';
       msgEl.textContent = d.error || 'Trade gagal';
       showToast(d.error || 'Trade gagal', 'err');
     }
-  } catch(e) {
+  } catch {
     msgEl.style.color = '#f85149';
     msgEl.textContent = 'Network error';
   }
 }
 
-// ─── Signals ─────────────────────────────────────────────────────────────────
+// ── Auto-scan top 10 ──────────────────────────────────────────────────────────
+function stopAutoScan() { autoScanActive = false; }
+
+async function startAutoScan() {
+  if (!recMarkets.length) { await loadRecommendations(); }
+  if (!recMarkets.length) return;
+  autoScanActive = true;
+  const top = recMarkets.slice(0, 10);
+  const bar = $('autoScanBar');
+
+  for (let i = 0; i < top.length; i++) {
+    if (!autoScanActive) {
+      bar.innerHTML = '<span style="color:#8b949e;">Auto-scan dihentikan.</span>';
+      return;
+    }
+    const pct = Math.round((i / top.length) * 100);
+    bar.innerHTML = `
+      <div class="spinner" style="width:12px;height:12px;border-width:2px;flex-shrink:0;"></div>
+      <span>Auto-scan: menganalisis market ${i+1}/${top.length} — <em style="color:#e6edf3;">${top[i].question.slice(0,50)}…</em></span>
+      <div style="flex:1;background:#21262d;border-radius:4px;height:4px;margin:0 8px;overflow:hidden;">
+        <div style="width:${pct}%;background:#1f6feb;height:4px;border-radius:4px;transition:width 0.3s;"></div>
+      </div>
+      <button onclick="stopAutoScan()" style="width:auto;padding:4px 12px;font-size:0.73rem;background:#21262d;border:1px solid #30363d;color:#8b949e;">Stop</button>`;
+    await analyzeRecCard(i, top[i].question, true);
+    await sleep(400);
+  }
+
+  autoScanActive = false;
+  bar.innerHTML = `
+    <span style="color:#3fb950;">✓ Auto-scan selesai — ${top.length} market dianalisis</span>
+    <button onclick="$('autoScanBar').innerHTML=''" style="width:auto;padding:3px 10px;font-size:0.73rem;background:#21262d;border:1px solid #30363d;color:#8b949e;margin-left:8px;">Tutup</button>`;
+}
+
+// ── Signals ───────────────────────────────────────────────────────────────────
 async function fetchSignals() {
   try {
-    const [sigRes, statusRes, provRes] = await Promise.all([
-      fetch('/api/scanner/signals'),
-      fetch('/api/scanner/status'),
-      fetch('/api/ai/providers')
+    const [sigData, statusData, provData] = await Promise.all([
+      fetch('/api/scanner/signals').then(r => r.json()),
+      fetch('/api/scanner/status').then(r => r.json()),
+      fetch('/api/ai/providers').then(r => r.json()),
     ]);
-    const sigData    = await sigRes.json();
-    const statusData = await statusRes.json();
-    const provData   = await provRes.json();
-
     const hasKey = provData.groq || provData.anthropic || provData.openai || provData.google;
-    document.getElementById('noKeyNotice').style.display = hasKey ? 'none' : 'block';
+    $('noKeyNotice').style.display = hasKey ? 'none' : 'block';
 
-    const sb = document.getElementById('scannerStatusBar');
-    const dotClass = statusData.running ? 's-running' : 's-stopped';
     const lastScan = statusData.lastScanAt ? new Date(statusData.lastScanAt).toLocaleTimeString() : 'Never';
     const nextScan = statusData.nextScanAt ? new Date(statusData.nextScanAt).toLocaleTimeString() : '--';
-    sb.innerHTML = `
-      <span class="s-dot ${dotClass}"></span>
+    $('scannerStatusBar').innerHTML = `
+      <span class="s-dot ${statusData.running ? 's-running' : 's-stopped'}"></span>
       <span class="s-label">Scanner:</span> <span class="s-val">${statusData.running ? 'Running' : 'Stopped'}</span>
-      <span class="s-label">Last scan:</span> <span class="s-val">${lastScan}</span>
-      <span class="s-label">Next scan:</span> <span class="s-val">${nextScan}</span>
-      <span class="s-label">Markets scanned:</span> <span class="s-val">${statusData.marketsScanned || 0}</span>
-      <span class="s-count">${statusData.signalCount || 0} signals</span>
-      <button class="s-refresh" onclick="fetchSignals()">↻ Refresh</button>`;
+      <span class="s-label">Last:</span> <span class="s-val">${lastScan}</span>
+      <span class="s-label">Next:</span> <span class="s-val">${nextScan}</span>
+      <span class="s-label">Scanned:</span> <span class="s-val">${statusData.marketsScanned||0}</span>
+      <span class="s-count">${statusData.signalCount||0} signals</span>
+      <button class="s-btn" onclick="fetchSignals()">↻ Refresh</button>`;
 
     const signals = sigData.signals || [];
     updateSignalBadge(signals.length);
-    const sg = document.getElementById('signalsGrid');
+    const sg = $('signalsGrid');
     if (!signals.length) {
-      sg.innerHTML = hasKey
-        ? '<div class="empty">No high-confidence signals yet — scanner runs every 10 min</div>'
-        : '<div class="empty">Set an AI API key to start scanning</div>';
+      sg.innerHTML = `<div class="empty">${hasKey ? 'No high-confidence signals yet — scanner runs every 10 min' : 'Set an AI API key to start scanning'}</div>`;
       return;
     }
-    sg.innerHTML = `<div class="signals-grid">${signals.map(s => renderSignalCard(s)).join('')}</div>`;
-  } catch(e) {}
+    sg.innerHTML = `<div class="signals-grid">${signals.map(renderSignalCard).join('')}</div>`;
+  } catch {}
 }
 
 function renderSignalCard(s) {
-  const dir = (s.direction||'').toUpperCase();
-  const conf = Math.round((s.confidence||0)*100);
-  const risk = Math.round((s.riskScore||0)*100);
-  const dirClass = dir === 'YES' ? 'sig-buy' : dir === 'NO' ? 'sig-sell' : 'sig-hold';
-  const badgeClass = dir === 'YES' ? 'sig-dir-buy' : dir === 'NO' ? 'sig-dir-sell' : 'sig-dir-hold';
-  const confClass = conf >= 80 ? 'sig-conf-green' : 'sig-conf-yellow';
-  const confBarColor = conf >= 75 ? '#3fb950' : '#e3b341';
-  const highClass = conf >= 85 ? 'sig-high' : '';
-  const sideLabel = dir === 'YES' ? 'BUY YES' : dir === 'NO' ? 'SELL (BUY NO)' : '';
-  const safeM = (s.market||'').replace(/'/g, "\\'");
-  const ts = s.detectedAt ? new Date(s.detectedAt).toLocaleString() : '';
-  return `<div class="signal-card ${dirClass} ${highClass}">
-    <div class="signal-card-top">
-      <span class="sig-dir-badge ${badgeClass}">${sideLabel || dir}</span>
-      <span class="sig-conf ${confClass}">${conf}%</span>
+  const dir    = (s.direction||'').toUpperCase();
+  const conf   = Math.round((s.confidence||0)*100);
+  const risk   = Math.round((s.riskScore||0)*100);
+  const cls    = dir === 'YES' ? 'sig-buy' : dir === 'NO' ? 'sig-sell' : 'sig-hold';
+  const dirCls = dir === 'YES' ? 'dir-buy'  : dir === 'NO' ? 'dir-sell'  : 'dir-hold';
+  const label  = dir === 'YES' ? 'BUY YES' : dir === 'NO' ? 'BUY NO' : dir;
+  const pctCls = conf >= 80 ? '' : 'yellow';
+  const highCls = conf >= 85 ? 'sig-high' : '';
+  const safeM  = JSON.stringify(s.market || '');
+  const ts     = s.detectedAt ? new Date(s.detectedAt).toLocaleString() : '';
+  return `<div class="sig-card ${cls} ${highCls}">
+    <div class="sig-top">
+      <span class="sig-dir ${dirCls}">${label}</span>
+      <span class="sig-pct ${pctCls}">${conf}%</span>
     </div>
-    <div class="sig-market">${(s.market||'').length > 80 ? (s.market||'').slice(0,78)+'…' : (s.market||'')}</div>
-    <div class="sig-reason">${s.reason || ''}</div>
+    <div class="sig-market">${(s.market||'').slice(0,80)}</div>
+    <div class="sig-reason">${s.reason||''}</div>
     <div class="sig-meta">
-      <span class="sig-meta-tag">${s.platform || ''}</span>
-      <span class="sig-meta-tag">${s.provider || ''}</span>
-      <span class="sig-meta-tag">consensus: ${s.consensus || '--'}</span>
-      <span class="sig-meta-tag">score: ${(s.score||0).toFixed(2)}</span>
+      <span class="sig-tag">${s.platform||''}</span>
+      <span class="sig-tag">${s.provider||''}</span>
+      <span class="sig-tag">consensus: ${s.consensus||'--'}</span>
+      <span class="sig-tag">score: ${(s.score||0).toFixed(2)}</span>
     </div>
-    <div class="sig-bar-row">
-      <span class="sig-bar-label">Confidence</span>
-      <div class="sig-bar-track"><div class="sig-bar-fill-conf" style="width:${conf}%;background:${confBarColor};border-radius:3px;height:4px;"></div></div>
-      <span class="sig-bar-pct">${conf}%</span>
-    </div>
-    <div class="sig-bar-row">
-      <span class="sig-bar-label">Risk</span>
-      <div class="sig-bar-track"><div class="sig-bar-fill-risk" style="width:${risk}%;"></div></div>
-      <span class="sig-bar-pct">${risk}%</span>
-    </div>
+    ${barRows(conf, risk)}
     <div class="sig-actions">
-      ${dir === 'YES' ? `<button class="sig-trade-btn sig-trade-buy" onclick="tradeSignal('${safeM}','YES')">▲ Buy YES</button>` : ''}
-      ${dir === 'NO'  ? `<button class="sig-trade-btn sig-trade-sell" onclick="tradeSignal('${safeM}','NO')">▼ Buy NO</button>` : ''}
-      <button class="sig-analyze-btn" onclick="analyzeFromSignal('${safeM}')">AI Detail</button>
+      ${dir === 'YES' ? `<button class="sig-trade-btn sig-trade-buy" onclick="tradeSignal(${safeM},'YES')">▲ Buy YES</button>` : ''}
+      ${dir === 'NO'  ? `<button class="sig-trade-btn sig-trade-sell" onclick="tradeSignal(${safeM},'NO')">▼ Buy NO</button>`  : ''}
+      <button class="sig-detail-btn" onclick="analyzeFromSignal(${safeM})">AI Detail</button>
     </div>
     ${ts ? `<div class="sig-time">Detected: ${ts}</div>` : ''}
   </div>`;
 }
 
 function tradeSignal(market, side) {
-  const dashBtn = document.querySelector('nav button');
-  showPage('dashboard', dashBtn);
-  document.getElementById('tradeMarket').value = market;
-  document.getElementById('tradeSide').value = side;
-  document.getElementById('tradeSize').value = '';
-  const tradeCard = document.getElementById('tradeMarket').closest('.card');
-  tradeCard.style.borderColor = '#1f6feb';
-  tradeCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  setTimeout(() => { tradeCard.style.borderColor = ''; }, 2000);
-  const msgEl = document.getElementById('msg');
-  msgEl.style.color = '#58a6ff';
-  msgEl.textContent = `Signal loaded: ${side} on "${market}" — set a size and click Execute Order.`;
+  showPage('dashboard', $('navDash'));
+  $('tradeMarket').value = market;
+  $('tradeSide').value   = side;
+  $('tradeSize').value   = '';
+  const card = $('tradeMarket').closest('.card');
+  card.style.borderColor = '#1f6feb';
+  card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  setTimeout(() => { card.style.borderColor = ''; }, 2000);
+  $('msg').style.color = '#58a6ff';
+  $('msg').textContent = `Signal loaded: ${side} on "${market}" — set a size and click Execute Order.`;
 }
 
 function analyzeFromSignal(market) {
-  const aiBtn = document.querySelectorAll('nav button')[3];
-  showPage('ai', aiBtn);
-  document.getElementById('aiMarket').value = market;
+  showPage('ai', $('navAI'));
+  $('aiMarket').value = market;
   runAnalysis();
 }
 
-// ─── AI Analysis Page ─────────────────────────────────────────────────────────
+function updateSignalBadge(count) {
+  const btn = $('navSignals');
+  let badge = btn.querySelector('.sig-nav-badge');
+  if (count > 0) {
+    if (!badge) { badge = document.createElement('span'); badge.className = 'sig-nav-badge'; btn.appendChild(badge); }
+    badge.textContent = count;
+  } else { badge?.remove(); }
+}
+
+// ── AI Analysis page ──────────────────────────────────────────────────────────
 async function runAnalysis() {
-  const market = document.getElementById('aiMarket').value.trim();
-  const context = document.getElementById('aiContext').value.trim();
+  const market  = $('aiMarket').value.trim();
+  const context = $('aiContext').value.trim();
   if (!market) return;
-  const el = document.getElementById('aiResult');
+  const el = $('aiResult');
   el.innerHTML = '<div class="analyzing"><div class="spinner"></div>Analyzing with all AI providers...</div>';
   try {
-    const r = await fetch('/api/ai/analyze', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({market, context}) });
-    const d = await r.json();
+    const d = await post('/api/ai/analyze', { market, context });
     if (!d.success && d.error) { el.innerHTML = `<div style="color:#f85149">${d.error}</div>`; return; }
-    const best = d.best || {};
-    const conf = Math.round((best.confidence||0)*100);
-    const risk = Math.round((best.riskScore||0)*100);
+    const best     = d.best || {};
+    const conf     = Math.round((best.confidence||0)*100);
+    const risk     = Math.round((best.riskScore||0)*100);
     const dirColor = best.direction === 'YES' ? '#3fb950' : best.direction === 'NO' ? '#f85149' : '#e3b341';
-    el.innerHTML = `<div class="ai-result">
-      <div><span class="ai-provider-tag">${best.provider||'AI'}</span><span style="font-size:0.75rem;color:#8b949e;">${d.agreingCount||0}/${d.totalValid||0} providers agree · consensus: ${d.consensus||'--'}</span></div>
-      <div class="ai-direction" style="color:${dirColor};">${best.direction || 'HOLD'}</div>
-      <div class="ai-reason">${best.reason||''}</div>
-      <div class="ai-bars">
-        <div class="ai-bar-row"><span class="ai-bar-label">Confidence</span><div class="ai-bar-track"><div class="ai-bar-fill-conf" style="width:${conf}%"></div></div><span class="ai-bar-pct">${conf}%</span></div>
-        <div class="ai-bar-row"><span class="ai-bar-label">Risk</span><div class="ai-bar-track"><div class="ai-bar-fill-risk" style="width:${risk}%"></div></div><span class="ai-bar-pct">${risk}%</span></div>
+    el.innerHTML = `
+      <div class="ai-result">
+        <div>
+          <span class="ai-provider-tag">${best.provider||'AI'}</span>
+          <span style="font-size:0.75rem;color:#8b949e;">${d.agreingCount||0}/${d.totalValid||0} providers agree · consensus: ${d.consensus||'--'}</span>
+        </div>
+        <div class="ai-direction" style="color:${dirColor};">${best.direction||'HOLD'}</div>
+        <div class="ai-reason">${best.reason||''}</div>
+        <div style="margin-top:10px;">${barRows(conf, risk)}</div>
       </div>
-    </div>
-    <div class="provider-list">${(d.providers||[]).map(p => `<div class="provider-item ${p.error?'errored':''}">
-      <div class="p-name">${p.provider}</div>
-      <div>${p.error ? '⚠ '+p.error : p.direction+' — '+(Math.round((p.confidence||0)*100))+'%'}</div>
-      ${!p.error?`<div style="color:#8b949e;font-size:0.72rem;margin-top:3px;">${(p.reason||'').slice(0,60)}${(p.reason||'').length>60?'…':''}</div>`:''}
-    </div>`).join('')}</div>`;
-  } catch(e) { el.innerHTML = '<div style="color:#f85149">Analysis failed</div>'; }
+      <div class="provider-list">${(d.providers||[]).map(p => `
+        <div class="provider-item ${p.error?'errored':''}">
+          <div class="p-name">${p.provider}</div>
+          <div>${p.error ? '⚠ '+p.error : p.direction+' — '+Math.round((p.confidence||0)*100)+'%'}</div>
+          ${!p.error ? `<div style="color:#8b949e;font-size:0.72rem;margin-top:3px;">${(p.reason||'').slice(0,60)}${(p.reason||'').length>60?'…':''}</div>` : ''}
+        </div>`).join('')}
+      </div>`;
+  } catch { el.innerHTML = '<div style="color:#f85149">Analysis failed</div>'; }
 }
 
 async function fetchProviders() {
   try {
-    const d = await (await fetch('/api/ai/providers')).json();
-    const el = document.getElementById('providerStatus');
-    el.innerHTML = `<div class="provider-list">${['google','groq','openai','anthropic'].map(p => `
-      <div class="provider-item ${d[p]?'':'errored'}">
-        <div class="p-name">${p}</div>
-        <div style="color:${d[p]?'#3fb950':'#f85149'}">${d[p]?'✓ Connected':'✗ No API key'}</div>
-      </div>`).join('')}
-    </div>
-    <div style="margin-top:10px;font-size:0.78rem;color:#8b949e;">Preferred: <strong style="color:#58a6ff">${d.preferred}</strong></div>`;
-  } catch(e) {}
+    const d = await fetch('/api/ai/providers').then(r => r.json());
+    $('providerStatus').innerHTML = `
+      <div class="provider-list">${['google','groq','openai','anthropic'].map(p => `
+        <div class="provider-item ${d[p]?'':'errored'}">
+          <div class="p-name">${p}</div>
+          <div style="color:${d[p]?'#3fb950':'#f85149'}">${d[p]?'✓ Connected':'✗ No API key'}</div>
+        </div>`).join('')}
+      </div>
+      <div style="margin-top:10px;font-size:0.78rem;color:#8b949e;">Preferred: <strong style="color:#58a6ff">${d.preferred}</strong></div>`;
+  } catch {}
 }
 
-// ─── Risk ─────────────────────────────────────────────────────────────────────
+// ── Risk ──────────────────────────────────────────────────────────────────────
 async function fetchRisk() {
   try {
-    const d = await (await fetch('/api/risk')).json();
-    const ks = d.killSwitch;
+    const d        = await fetch('/api/risk').then(r => r.json());
+    const ks       = d.killSwitch;
     const consLoss = d.consecutiveLosses || 0;
-    const effConf = Math.round((d.effectiveMinConf||0)*100);
+    const effConf  = Math.round((d.effectiveMinConf||0)*100);
     const dailyPnL = d.dailyPnL || 0;
     const dailyLoss = d.dailyLossLimit || 500;
-    const lossUsedPct = Math.min(100, Math.abs(Math.min(0, dailyPnL)) / dailyLoss * 100);
-    document.getElementById('riskPanel').innerHTML = `
-      <div class="risk-grid">
-        <div class="risk-card ${ks ? 'danger' : ''}">
-          <div class="risk-label">Kill Switch</div>
-          <div class="risk-value" style="color:${ks ? '#f85149' : '#3fb950'}">${ks ? 'ACTIVE' : 'Off'}</div>
-        </div>
-        <div class="risk-card ${consLoss >= 3 ? 'warning' : ''}">
-          <div class="risk-label">Consecutive Losses</div>
-          <div class="risk-value" style="color:${consLoss >= 3 ? '#e3b341' : '#e6edf3'}">${consLoss}</div>
-        </div>
-        <div class="risk-card">
-          <div class="risk-label">Effective Min Confidence</div>
-          <div class="risk-value">${effConf}%</div>
-          <div class="risk-bar-track"><div class="risk-bar-fill" style="width:${effConf}%;background:#1f6feb;"></div></div>
-        </div>
-        <div class="risk-card">
-          <div class="risk-label">Daily Trades</div>
-          <div class="risk-value">${d.dailyTrades || 0} / ${d.maxDailyTrades || 20}</div>
-          <div class="risk-bar-track"><div class="risk-bar-fill" style="width:${Math.min(100,(d.dailyTrades||0)/(d.maxDailyTrades||20)*100)}%;background:#1f6feb;"></div></div>
-        </div>
-        <div class="risk-card ${dailyPnL < -dailyLoss*0.5 ? 'warning' : ''}">
-          <div class="risk-label">Daily P&L</div>
-          <div class="risk-value ${dailyPnL >= 0 ? 'positive' : 'negative'}">${fmtPnL(dailyPnL)}</div>
-          <div class="risk-bar-track"><div class="risk-bar-fill" style="width:${lossUsedPct}%;background:#f85149;"></div></div>
-        </div>
-        <div class="risk-card">
-          <div class="risk-label">Open Positions</div>
-          <div class="risk-value">${d.openPositions || 0} / ${d.maxPositions || 10}</div>
-        </div>
-      </div>`;
-  } catch(e) {}
+    const lossPct  = Math.min(100, Math.abs(Math.min(0,dailyPnL)) / dailyLoss * 100);
+    const tradesPct = Math.min(100,(d.dailyTrades||0)/(d.maxDailyTrades||20)*100);
+    $('riskPanel').innerHTML = `<div class="risk-grid">
+      <div class="risk-card ${ks?'danger':''}">
+        <div class="risk-label">Kill Switch</div>
+        <div class="risk-value" style="color:${ks?'#f85149':'#3fb950'}">${ks?'ACTIVE':'Off'}</div>
+      </div>
+      <div class="risk-card ${consLoss>=3?'warning':''}">
+        <div class="risk-label">Consecutive Losses</div>
+        <div class="risk-value" style="color:${consLoss>=3?'#e3b341':'#e6edf3'}">${consLoss}</div>
+      </div>
+      <div class="risk-card">
+        <div class="risk-label">Min Confidence</div>
+        <div class="risk-value">${effConf}%</div>
+        <div style="background:#21262d;border-radius:4px;height:6px;margin-top:8px;"><div style="width:${effConf}%;background:#1f6feb;height:6px;border-radius:4px;"></div></div>
+      </div>
+      <div class="risk-card">
+        <div class="risk-label">Daily Trades</div>
+        <div class="risk-value">${d.dailyTrades||0} / ${d.maxDailyTrades||20}</div>
+        <div style="background:#21262d;border-radius:4px;height:6px;margin-top:8px;"><div style="width:${tradesPct}%;background:#1f6feb;height:6px;border-radius:4px;"></div></div>
+      </div>
+      <div class="risk-card ${dailyPnL < -dailyLoss*0.5?'warning':''}">
+        <div class="risk-label">Daily P&L</div>
+        <div class="risk-value ${dailyPnL>=0?'positive':'negative'}">${fmtPnL(dailyPnL)}</div>
+        <div style="background:#21262d;border-radius:4px;height:6px;margin-top:8px;"><div style="width:${lossPct}%;background:#f85149;height:6px;border-radius:4px;"></div></div>
+      </div>
+      <div class="risk-card">
+        <div class="risk-label">Open Positions</div>
+        <div class="risk-value">${d.openPositions||0} / ${d.maxPositions||10}</div>
+      </div>
+    </div>`;
+  } catch {}
 }
 
 async function setKillSwitch(enable) {
   try {
-    const r = await fetch('/api/risk/killswitch', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({enable}) });
-    const d = await r.json();
-    document.getElementById('killMsg').style.color = enable ? '#f85149' : '#3fb950';
-    document.getElementById('killMsg').textContent = enable ? 'Kill switch ENABLED — no new trades.' : 'Kill switch disabled — trading resumed.';
-    showToast(enable ? '🛑 Kill switch enabled' : '✓ Kill switch disabled', enable ? 'err' : 'ok');
+    await post('/api/risk/killswitch', {enable});
+    $('killMsg').style.color  = enable ? '#f85149' : '#3fb950';
+    $('killMsg').textContent  = enable ? 'Kill switch ENABLED — no new trades.' : 'Kill switch disabled — trading resumed.';
+    showToast(enable ? 'Kill switch enabled' : 'Kill switch disabled', enable ? 'err' : 'ok');
     fetchRisk(); fetchStatus();
-  } catch(e) {}
+  } catch {}
 }
 
-// ─── Analytics ────────────────────────────────────────────────────────────────
+// ── Analytics ─────────────────────────────────────────────────────────────────
 async function fetchAnalytics() {
   try {
-    const d = await (await fetch('/api/analytics')).json();
-    document.getElementById('aTotalTrades').textContent  = d.totalTrades  || 0;
-    document.getElementById('aTotalClosed').textContent  = d.totalClosed  || 0;
-    document.getElementById('aDailyTrades').textContent  = d.dailyTrades  || 0;
-    const tpnl = d.totalPnL || 0;
-    const tpnlEl = document.getElementById('aTotalPnL');
-    tpnlEl.textContent = fmtPnL(tpnl); tpnlEl.className = 'metric-value ' + (tpnl >= 0 ? 'positive' : 'negative');
-    const wr = d.winRate || 0;
-    const wrEl = document.getElementById('aWinRate');
-    wrEl.textContent = wr.toFixed(1) + '%'; wrEl.className = 'metric-value ' + (wr >= 50 ? 'positive' : 'negative');
-    const avg = d.avgPnLPerDay || 0;
-    const avgEl = document.getElementById('aAvgPnL');
-    avgEl.textContent = fmtPnL(avg); avgEl.className = 'metric-value ' + (avg >= 0 ? 'positive' : 'negative');
-    document.getElementById('aBestTrade').textContent  = fmtPnL(d.bestTrade  || 0);
-    document.getElementById('aWorstTrade').textContent = fmtPnL(d.worstTrade || 0);
-
-    const arc = document.getElementById('winRateArc');
+    const d = await fetch('/api/analytics').then(r => r.json());
+    $('aTotalTrades').textContent = d.totalTrades || 0;
+    $('aTotalClosed').textContent = d.totalClosed || 0;
+    $('aDailyTrades').textContent = d.dailyTrades || 0;
+    const setMetric = (id, val, pos) => {
+      const el = $(id); el.textContent = val;
+      el.className = 'metric-value ' + (pos ? 'positive' : 'negative');
+    };
+    setMetric('aTotalPnL', fmtPnL(d.totalPnL||0), (d.totalPnL||0) >= 0);
+    setMetric('aWinRate',  (d.winRate||0).toFixed(1)+'%', (d.winRate||0) >= 50);
+    setMetric('aAvgPnL',   fmtPnL(d.avgPnLPerDay||0), (d.avgPnLPerDay||0) >= 0);
+    $('aBestTrade').textContent  = fmtPnL(d.bestTrade  || 0);
+    $('aWorstTrade').textContent = fmtPnL(d.worstTrade || 0);
+    const wr   = d.winRate || 0;
     const circ = 2 * Math.PI * 50;
-    arc.setAttribute('stroke-dasharray', `${(wr/100)*circ} ${circ}`);
-    document.getElementById('winRatePct').textContent = wr.toFixed(1) + '%';
-
-    const pb = document.getElementById('platformBreakdown');
+    $('winRateArc').setAttribute('stroke-dasharray', `${(wr/100)*circ} ${circ}`);
+    $('winRatePct').textContent = wr.toFixed(1)+'%';
+    const pb = $('platformBreakdown');
     if (!d.platformBreakdown || !Object.keys(d.platformBreakdown).length) {
       pb.innerHTML = '<div class="empty">No trades yet</div>';
     } else {
       const maxV = Math.max(...Object.values(d.platformBreakdown));
       pb.innerHTML = Object.entries(d.platformBreakdown).map(([pl, cnt]) =>
-        `<div class="platform-bar"><span class="platform-name">${pl}</span>
-         <div class="bar-track"><div class="bar-fill" style="width:${maxV > 0 ? cnt/maxV*100 : 0}%"></div></div>
-         <span class="platform-count">${cnt} trades</span></div>`).join('');
+        `<div class="platform-bar">
+          <span class="platform-name">${pl}</span>
+          <div class="bar-track"><div class="bar-fill" style="width:${maxV>0?cnt/maxV*100:0}%"></div></div>
+          <span class="platform-count">${cnt} trades</span>
+        </div>`).join('');
     }
-
-    const jt = document.getElementById('journalTable');
-    if (!d.recentHistory || !d.recentHistory.length) {
+    const jt = $('journalTable');
+    if (!d.recentHistory?.length) {
       jt.innerHTML = '<div class="empty">No history yet</div>';
     } else {
       jt.innerHTML = `<table><thead><tr><th>Date</th><th>Trades</th><th>P&L</th><th>Note</th></tr></thead>
@@ -1061,19 +1018,19 @@ async function fetchAnalytics() {
           <td style="color:#8b949e;font-size:0.76rem;">${h.note||''}</td>
         </tr>`).join('')}</tbody></table>`;
     }
-  } catch(e) {}
+  } catch {}
 }
 
-// ─── Backtest ─────────────────────────────────────────────────────────────────
+// ── Backtest ──────────────────────────────────────────────────────────────────
 async function runBacktest() {
-  const el = document.getElementById('backtestResult');
+  const el = $('backtestResult');
   el.innerHTML = '<div class="analyzing"><div class="spinner"></div>Running backtest...</div>';
   try {
-    const d = await (await fetch('/api/backtest')).json();
+    const d = await fetch('/api/backtest').then(r => r.json());
     if (d.error) { el.innerHTML = `<div style="color:#f85149">${d.error}</div>`; return; }
     const pnl = d.totalPnL || 0;
     el.innerHTML = `
-      <div class="backtest-grid">
+      <div class="metric-grid">
         <div class="metric"><div class="metric-label">Total Trades</div><div class="metric-value neutral">${d.totalTrades||0}</div></div>
         <div class="metric"><div class="metric-label">Wins</div><div class="metric-value positive">${d.wins||0}</div></div>
         <div class="metric"><div class="metric-label">Losses</div><div class="metric-value negative">${d.losses||0}</div></div>
@@ -1083,8 +1040,8 @@ async function runBacktest() {
         <div class="metric"><div class="metric-label">Max Drawdown</div><div class="metric-value negative">${fmtPnL(d.maxDrawdown||0)}</div></div>
         <div class="metric"><div class="metric-label">Sharpe Ratio</div><div class="metric-value">${(d.sharpeRatio||0).toFixed(2)}</div></div>
       </div>
-      ${d.equityCurve && d.equityCurve.length > 1 ? renderEquityCurve(d.equityCurve) : ''}`;
-  } catch(e) { el.innerHTML = '<div style="color:#f85149">Backtest failed</div>'; }
+      ${d.equityCurve?.length > 1 ? renderEquityCurve(d.equityCurve) : ''}`;
+  } catch { el.innerHTML = '<div style="color:#f85149">Backtest failed</div>'; }
 }
 
 function renderEquityCurve(curve) {
@@ -1092,85 +1049,69 @@ function renderEquityCurve(curve) {
   const min = Math.min(...curve), max = Math.max(...curve);
   const range = max - min || 1;
   const pts = curve.map((v, i) => {
-    const x = pad + (i / (curve.length - 1)) * (W - 2*pad);
-    const y = H - pad - ((v - min) / range) * (H - 2*pad);
+    const x = pad + (i/(curve.length-1)) * (W-2*pad);
+    const y = H - pad - ((v-min)/range) * (H-2*pad);
     return `${x},${y}`;
   }).join(' ');
-  const lastVal = curve[curve.length-1];
-  const lineColor = lastVal >= curve[0] ? '#3fb950' : '#f85149';
+  const col = curve[curve.length-1] >= curve[0] ? '#3fb950' : '#f85149';
   return `<svg class="equity-chart" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
-    <polyline points="${pts}" fill="none" stroke="${lineColor}" stroke-width="2" stroke-linejoin="round"/>
+    <polyline points="${pts}" fill="none" stroke="${col}" stroke-width="2" stroke-linejoin="round"/>
     <line x1="${pad}" y1="${H-pad}" x2="${W-pad}" y2="${H-pad}" stroke="#21262d" stroke-width="1"/>
   </svg>`;
 }
 
-// ─── Markets Page ─────────────────────────────────────────────────────────────
+// ── Markets page ──────────────────────────────────────────────────────────────
 async function searchMarkets() {
-  const q = document.getElementById('searchQuery').value.trim();
-  const cat = document.getElementById('searchCategory').value;
+  const q   = $('searchQuery').value.trim();
+  const cat = $('searchCategory').value;
   const params = new URLSearchParams();
-  if (q) params.set('q', q);
+  if (q)   params.set('q', q);
   if (cat) params.set('category', cat);
   try {
-    const data = await (await fetch('/api/markets/search?' + params.toString())).json();
-    const el = document.getElementById('marketResults');
+    const data = await fetch('/api/markets/search?' + params).then(r => r.json());
+    const el = $('marketResults');
     if (!data.length) { el.innerHTML = '<div class="empty">No markets found</div>'; return; }
     el.innerHTML = data.map(m => {
-      const price = m.currentPrice ? Math.round(m.currentPrice * 100) + '¢' : '--';
-      const vol = m.volume >= 1000000 ? '$'+(m.volume/1000000).toFixed(1)+'M' : m.volume >= 1000 ? '$'+(m.volume/1000).toFixed(0)+'K' : '$'+(m.volume||0).toFixed(0);
+      const price = m.currentPrice ? Math.round(m.currentPrice*100)+'¢' : '--';
+      const col   = pColor(m.currentPrice||0);
       return `<div class="market-item">
         <div style="display:flex;align-items:center;gap:8px;">
           <span style="font-size:0.78rem;">${m.question}</span>
-          <span style="margin-left:auto;font-weight:bold;color:${m.currentPrice >= 0.6 ? '#3fb950' : m.currentPrice >= 0.4 ? '#e3b341' : '#f85149'}">${price}</span>
+          <span style="margin-left:auto;font-weight:bold;color:${col}">${price}</span>
         </div>
-        <div class="market-meta">${m.platform} · ${m.category} · Vol: <span class="vol">${vol}</span> · Ends: ${m.endDate||'?'}</div>
+        <div class="market-meta">${m.platform} · ${m.category} · Vol: <span class="vol">$${fmtVol(m.volume)}</span> · Ends: ${m.endDate||'?'}</div>
       </div>`;
     }).join('');
-  } catch(e) {}
+  } catch {}
 }
 
 async function fetchTrending() {
   try {
-    const data = await (await fetch('/api/markets/trending')).json();
-    const el = document.getElementById('trendingMarkets');
+    const data = await fetch('/api/markets/trending').then(r => r.json());
+    const el = $('trendingMarkets');
     if (!data.length) { el.innerHTML = '<div class="empty">No markets</div>'; return; }
     el.innerHTML = data.map(m => {
-      const price = m.currentPrice ? Math.round(m.currentPrice * 100) + '¢' : '--';
-      const vc = m.volumeChange;
+      const price = m.currentPrice ? Math.round(m.currentPrice*100)+'¢' : '--';
+      const col   = pColor(m.currentPrice||0);
+      const vc    = m.volumeChange;
       const vcStr = vc !== undefined ? (vc >= 0 ? `<span class="positive">+${vc}%</span>` : `<span class="negative">${vc}%</span>`) : '';
-      const vol = m.volume >= 1000000 ? '$'+(m.volume/1000000).toFixed(1)+'M' : m.volume >= 1000 ? '$'+(m.volume/1000).toFixed(0)+'K' : '$'+(m.volume||0).toFixed(0);
       return `<div class="market-item">
         <div style="display:flex;align-items:center;gap:8px;">
           <span style="font-size:0.78rem;">${m.question}</span>
-          <span style="margin-left:auto;font-weight:bold;color:${m.currentPrice >= 0.6 ? '#3fb950' : m.currentPrice >= 0.4 ? '#e3b341' : '#f85149'}">${price}</span>
+          <span style="margin-left:auto;font-weight:bold;color:${col}">${price}</span>
         </div>
-        <div class="market-meta">${m.platform} · ${m.category} · Vol: <span class="vol">${vol}</span> ${vcStr}</div>
+        <div class="market-meta">${m.platform} · ${m.category} · Vol: <span class="vol">$${fmtVol(m.volume)}</span> ${vcStr}</div>
       </div>`;
     }).join('');
-  } catch(e) {}
+  } catch {}
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-function updateSignalBadge(count) {
-  const navBtn = document.getElementById('navSignals');
-  if (!navBtn) return;
-  let badge = navBtn.querySelector('.sig-nav-badge');
-  if (count > 0) {
-    if (!badge) { badge = document.createElement('span'); badge.className = 'sig-nav-badge'; navBtn.appendChild(badge); }
-    badge.textContent = count;
-  } else { if (badge) badge.remove(); }
-}
-
+// ── Init ──────────────────────────────────────────────────────────────────────
 async function pollSignalCount() {
   try {
-    const d = await (await fetch('/api/scanner/status')).json();
+    const d = await fetch('/api/scanner/status').then(r => r.json());
     updateSignalBadge(d.signalCount || 0);
-  } catch(e) {}
-}
-
-function fmtPnL(v) {
-  const n = parseFloat(v) || 0;
-  return (n >= 0 ? '+' : '') + '$' + Math.abs(n).toFixed(2);
+  } catch {}
 }
 
 function init() {
@@ -1178,8 +1119,8 @@ function init() {
   fetchPositions();
   fetchProviders();
   pollSignalCount();
-  setInterval(fetchStatus, 10000);
-  setInterval(fetchPositions, 4000);
+  setInterval(fetchStatus,    10000);
+  setInterval(fetchPositions,  4000);
   setInterval(pollSignalCount, 30000);
 }
 init();
