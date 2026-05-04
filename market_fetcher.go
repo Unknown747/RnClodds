@@ -104,16 +104,17 @@ func (f *MarketFetcher) fetchManifold() ([]Market, map[string]float64, error) {
                 }
 
                 mkt := Market{
-                        ID:        "man-" + m.ID,
-                        Platform:  "manifold",
-                        Question:  m.Question,
-                        Category:  classifyQuestion(m.Question),
-                        Volume:    m.Volume,
-                        Liquidity: m.Volume * 0.1,
-                        StartDate: "2024-01-01",
-                        EndDate:   endDate,
-                        Outcomes:  []string{"YES", "NO"},
-                        Active:    true,
+                        ID:           "man-" + m.ID,
+                        Platform:     "manifold",
+                        Question:     m.Question,
+                        Category:     classifyQuestion(m.Question),
+                        Volume:       m.Volume,
+                        Liquidity:    m.Volume * 0.1,
+                        StartDate:    "2024-01-01",
+                        EndDate:      endDate,
+                        Outcomes:     []string{"YES", "NO"},
+                        Active:       true,
+                        CurrentPrice: m.Probability,
                 }
                 markets = append(markets, mkt)
 
@@ -209,16 +210,17 @@ func (f *MarketFetcher) fetchKalshi() ([]Market, map[string]float64, error) {
                 }
 
                 mkt := Market{
-                        ID:        "kal-" + m.Ticker,
-                        Platform:  "kalshi",
-                        Question:  question,
-                        Category:  classifyQuestion(question),
-                        Volume:    vol,
-                        Liquidity: liq,
-                        StartDate: "2024-01-01",
-                        EndDate:   endDate,
-                        Outcomes:  []string{"YES", "NO"},
-                        Active:    true,
+                        ID:           "kal-" + m.Ticker,
+                        Platform:     "kalshi",
+                        Question:     question,
+                        Category:     classifyQuestion(question),
+                        Volume:       vol,
+                        Liquidity:    liq,
+                        StartDate:    "2024-01-01",
+                        EndDate:      endDate,
+                        Outcomes:     []string{"YES", "NO"},
+                        Active:       true,
+                        CurrentPrice: yesProb,
                 }
                 markets = append(markets, mkt)
 

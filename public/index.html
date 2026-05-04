@@ -14,12 +14,10 @@
     nav button.active { background: #1f6feb; border-color: #1f6feb; color: #fff; }
     nav button:hover:not(.active) { border-color: #58a6ff; color: #58a6ff; }
     .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #3fb950; display: inline-block; flex-shrink: 0; }
-    .kill-dot { width: 10px; height: 10px; border-radius: 50%; background: #f85149; display: inline-block; }
     .page { display: none; }
     .page.active { display: block; }
     .container { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 16px; }
     .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 16px; }
-    .card.danger { border-color: #6e2020; }
     .card h2 { font-size: 0.85rem; color: #8b949e; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
     .stat-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #21262d; font-size: 0.84rem; }
     .stat-row:last-child { border-bottom: none; }
@@ -170,9 +168,76 @@
     .sig-time { font-size: 0.68rem; color: #8b949e; margin-top: 8px; }
     .sig-nav-badge { background: #1f6feb; color: #fff; border-radius: 8px; padding: 0px 5px; font-size: 0.65rem; font-weight: bold; margin-left: 4px; vertical-align: middle; display: inline-block; line-height: 1.4; }
     .sig-no-key-notice { background: #1a1400; border: 1px solid #9e6a03; border-radius: 8px; padding: 14px 16px; font-size: 0.82rem; color: #e3b341; margin-bottom: 12px; line-height: 1.6; }
+
+    /* ─── REKOMENDASI PAGE ─────────────────────────────────────────────────── */
+    .rec-toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; padding: 12px 16px; background: #161b22; border-bottom: 1px solid #30363d; }
+    .rec-toolbar select, .rec-toolbar input { width: auto; margin-bottom: 0; flex: 1; min-width: 140px; max-width: 220px; }
+    .rec-toolbar button { width: auto; padding: 8px 16px; }
+    .rec-toolbar .rec-count { margin-left: auto; font-size: 0.76rem; color: #8b949e; white-space: nowrap; }
+    .rec-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 14px; padding: 16px; }
+
+    /* Market Recommendation Card */
+    .rec-card { background: #161b22; border: 1px solid #30363d; border-radius: 10px; overflow: hidden; transition: border-color 0.2s; }
+    .rec-card:hover { border-color: #58a6ff44; }
+    .rec-card-header { padding: 14px 16px 10px; }
+    .rec-card-top { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px; }
+    .rec-platform-badge { padding: 2px 8px; border-radius: 4px; font-size: 0.68rem; font-weight: bold; flex-shrink: 0; text-transform: uppercase; }
+    .rec-plat-manifold { background: #1a2840; color: #58a6ff; }
+    .rec-plat-kalshi   { background: #1a3020; color: #3fb950; }
+    .rec-plat-polymarket { background: #2a1a40; color: #a78bfa; }
+    .rec-cat-badge { padding: 2px 7px; border-radius: 4px; font-size: 0.67rem; background: #21262d; color: #8b949e; }
+    .rec-question { font-size: 0.85rem; color: #e6edf3; line-height: 1.45; font-weight: bold; margin-bottom: 10px; }
+    .rec-price-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .rec-price-label { font-size: 0.7rem; color: #8b949e; }
+    .rec-price-bar-track { flex: 1; background: #21262d; border-radius: 4px; height: 8px; position: relative; overflow: hidden; }
+    .rec-price-bar-yes { height: 8px; border-radius: 4px 0 0 4px; background: #238636; transition: width 0.4s; }
+    .rec-price-val { font-size: 0.88rem; font-weight: bold; color: #3fb950; min-width: 38px; text-align: right; }
+    .rec-vol { font-size: 0.72rem; color: #8b949e; }
+
+    /* Analysis section (inside the card, revealed after clicking Analyze) */
+    .rec-analyze-btn { display: flex; align-items: center; gap: 6px; background: transparent; border: 1px solid #30363d; color: #8b949e; padding: 7px 14px; border-radius: 6px; font-size: 0.78rem; width: 100%; justify-content: center; cursor: pointer; font-family: inherit; transition: all 0.15s; margin: 0 16px 14px; width: calc(100% - 32px); }
+    .rec-analyze-btn:hover { border-color: #58a6ff; color: #58a6ff; background: transparent; }
+    .rec-analyze-btn.loading { border-color: #30363d; color: #58a6ff; cursor: default; }
+
+    .rec-analysis { border-top: 1px solid #21262d; padding: 14px 16px; background: #0d1117; display: none; }
+    .rec-analysis.visible { display: block; }
+    .rec-ai-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+    .rec-direction-badge { padding: 4px 12px; border-radius: 6px; font-size: 0.82rem; font-weight: bold; }
+    .rec-dir-buy  { background: #1a4731; color: #3fb950; }
+    .rec-dir-sell { background: #3d1a1a; color: #f85149; }
+    .rec-dir-hold { background: #2d2a1a; color: #e3b341; }
+    .rec-conf-num { font-size: 1.2rem; font-weight: bold; margin-left: auto; }
+    .rec-reason { font-size: 0.76rem; color: #8b949e; line-height: 1.5; margin-bottom: 10px; }
+    .rec-bars { margin-bottom: 12px; }
+    .rec-bar-row { display: flex; align-items: center; gap: 8px; font-size: 0.72rem; margin-bottom: 5px; }
+    .rec-bar-label { width: 72px; color: #8b949e; }
+    .rec-bar-track { flex: 1; background: #21262d; border-radius: 3px; height: 5px; }
+    .rec-bar-conf { background: #3fb950; height: 5px; border-radius: 3px; transition: width 0.4s; }
+    .rec-bar-risk { background: #f85149; height: 5px; border-radius: 3px; transition: width 0.4s; }
+    .rec-bar-pct { width: 34px; text-align: right; color: #8b949e; }
+
+    /* Execute form inside the card */
+    .rec-execute { border-top: 1px solid #21262d; padding: 14px 16px; background: #0a0f14; display: none; }
+    .rec-execute.visible { display: block; }
+    .rec-execute-title { font-size: 0.72rem; color: #8b949e; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
+    .rec-exec-row { display: flex; gap: 8px; margin-bottom: 8px; }
+    .rec-exec-row input { margin-bottom: 0; flex: 1; }
+    .rec-exec-btns { display: flex; gap: 8px; }
+    .rec-exec-yes { background: #238636; color: #fff; border: none; flex: 1; padding: 9px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: bold; cursor: pointer; font-family: inherit; transition: background 0.15s; }
+    .rec-exec-yes:hover { background: #2ea043; }
+    .rec-exec-no  { background: #b91c1c; color: #fff; border: none; flex: 1; padding: 9px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: bold; cursor: pointer; font-family: inherit; transition: background 0.15s; }
+    .rec-exec-no:hover { background: #dc2626; }
+    .rec-exec-msg { font-size: 0.76rem; margin-top: 8px; min-height: 18px; }
+
+    /* Toast notification */
+    #toast { position: fixed; bottom: 24px; right: 24px; background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 12px 18px; font-size: 0.82rem; color: #e6edf3; z-index: 9999; opacity: 0; transform: translateY(10px); transition: all 0.25s; pointer-events: none; max-width: 340px; }
+    #toast.show { opacity: 1; transform: translateY(0); }
+    #toast.toast-ok { border-color: #238636; color: #3fb950; }
+    #toast.toast-err { border-color: #b91c1c; color: #f85149; }
   </style>
 </head>
 <body>
+<div id="toast"></div>
 <header>
   <span class="status-dot" id="statusDot"></span>
   <h1>CloddsBot</h1>
@@ -180,6 +245,7 @@
   <span id="killBadge" style="display:none;background:#6e2020;color:#f85149;padding:2px 10px;border-radius:4px;font-size:0.72rem;">KILL SWITCH ON</span>
   <nav>
     <button class="active" onclick="showPage('dashboard',this)">Dashboard</button>
+    <button onclick="showPage('recommend',this)" id="navRecommend">Rekomendasi</button>
     <button onclick="showPage('signals',this)" id="navSignals">Signals</button>
     <button onclick="showPage('ai',this)">AI Analysis</button>
     <button onclick="showPage('risk',this)">Risk</button>
@@ -226,6 +292,32 @@
       </h2>
       <div id="positionsTable"><div class="empty">No open positions</div></div>
     </div>
+  </div>
+</div>
+
+<!-- REKOMENDASI -->
+<div id="page-recommend" class="page">
+  <div class="rec-toolbar">
+    <select id="recCategory" onchange="loadRecommendations()">
+      <option value="">Semua Kategori</option>
+      <option value="politics">Politik</option>
+      <option value="crypto">Crypto</option>
+      <option value="finance">Keuangan</option>
+      <option value="sports">Olahraga</option>
+      <option value="tech">Teknologi</option>
+      <option value="general">Umum</option>
+    </select>
+    <select id="recPlatform" onchange="loadRecommendations()">
+      <option value="">Semua Platform</option>
+      <option value="manifold">Manifold</option>
+      <option value="kalshi">Kalshi</option>
+    </select>
+    <input type="text" id="recSearch" placeholder="Cari market..." onkeydown="if(event.key==='Enter')loadRecommendations()" />
+    <button onclick="loadRecommendations()" style="width:auto;padding:8px 16px;">Cari</button>
+    <span class="rec-count" id="recCount"></span>
+  </div>
+  <div class="rec-grid" id="recGrid">
+    <div class="empty" style="grid-column:1/-1;">Memuat market live...</div>
   </div>
 </div>
 
@@ -360,21 +452,32 @@
 </div>
 
 <script>
-// --- Navigation ---
+// ─── Navigation ──────────────────────────────────────────────────────────────
 function showPage(name, btn) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
   btn.classList.add('active');
-  if (name === 'analytics') fetchAnalytics();
-  if (name === 'markets') fetchTrending();
-  if (name === 'risk') fetchRisk();
-  if (name === 'ai') fetchProviders();
-  if (name === 'backtest') runBacktest();
-  if (name === 'signals') fetchSignals();
+  if (name === 'analytics')  fetchAnalytics();
+  if (name === 'markets')    fetchTrending();
+  if (name === 'risk')       fetchRisk();
+  if (name === 'ai')         fetchProviders();
+  if (name === 'backtest')   runBacktest();
+  if (name === 'signals')    fetchSignals();
+  if (name === 'recommend')  loadRecommendations();
 }
 
-// --- Status ---
+// ─── Toast ───────────────────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg, type = 'ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show toast-' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.className = ''; }, 3500);
+}
+
+// ─── Status ──────────────────────────────────────────────────────────────────
 async function fetchStatus() {
   try {
     const res = await fetch('/api/status');
@@ -401,656 +504,663 @@ async function fetchStatus() {
   }
 }
 
-// --- Live Positions ---
-// Track previous prices to detect direction changes for flash animation
-const _prevPrices = {};
-
+// ─── Live Positions ───────────────────────────────────────────────────────────
+let prevPrices = {};
 async function fetchPositions() {
   try {
-    const res = await fetch('/api/positions/live');
-    const positions = await res.json();
+    const data = await (await fetch('/api/positions/live')).json();
     const el = document.getElementById('positionsTable');
-
-    // Update last-update timestamp
-    const tsEl = document.getElementById('lastUpdateTime');
-    if (tsEl) tsEl.textContent = 'Updated ' + new Date().toLocaleTimeString();
-
-    if (!positions || !positions.length) {
-      el.innerHTML = '<div class="empty">No open positions</div>';
-      _clearPrevPrices();
-      return;
-    }
-
-    // Total live P&L summary row
-    const totalPnL = positions.reduce((s, p) => s + (p.pnl || 0), 0);
-    const totalVal = positions.reduce((s, p) => s + (p.currentPrice * p.size), 0);
-
-    // Render table — detect price movement vs previous snapshot for flash
-    const rows = positions.map(p => {
-      const prev = _prevPrices[p.id];
+    document.getElementById('lastUpdateTime').textContent = 'Updated ' + new Date().toLocaleTimeString();
+    if (!data || data.length === 0) { el.innerHTML = '<div class="empty">No open positions</div>'; return; }
+    el.innerHTML = `<table><thead><tr>
+      <th>Market</th><th>Platform</th><th>Side</th><th>Size</th>
+      <th>Entry</th><th>Current</th><th>P&L</th><th>Actions</th>
+    </tr></thead><tbody>${data.map(p => {
+      const pid = p.position?.id || p.id;
+      const mkt = p.position?.market || p.market || '--';
+      const plt = p.position?.platform || p.platform || '--';
+      const side = p.position?.side || p.side || '--';
+      const size = (p.position?.size || p.size || 0).toFixed(2);
+      const entry = (p.position?.entryPrice || p.entryPrice || 0).toFixed(3);
+      const cur = (p.currentPrice || 0).toFixed(3);
+      const pnl = p.pnl?.pnl || 0;
+      const pnlPct = p.pnl?.pnlPct || 0;
+      const prev = prevPrices[pid];
       let flashClass = '';
       if (prev !== undefined) {
-        if (p.currentPrice > prev) flashClass = 'price-up';
-        else if (p.currentPrice < prev) flashClass = 'price-dn';
+        const curF = parseFloat(cur);
+        if (curF > prev) flashClass = 'price-up';
+        else if (curF < prev) flashClass = 'price-dn';
       }
-      _prevPrices[p.id] = p.currentPrice;
-
-      const arrow = prev === undefined ? '' : p.currentPrice > prev ? ' ▲' : p.currentPrice < prev ? ' ▼' : '';
-      const arrowColor = p.currentPrice > prev ? '#3fb950' : p.currentPrice < prev ? '#f85149' : '#8b949e';
-
-      const pnlClass = p.pnl > 0 ? 'pnl-pos' : p.pnl < 0 ? 'pnl-neg' : 'pnl-zero';
-      const pnlSign = p.pnl >= 0 ? '+' : '';
-      const pnlStr = `${pnlSign}$${Math.abs(p.pnl).toFixed(2)}`;
-      const pnlPct = `${p.pnlPercent >= 0 ? '+' : ''}${p.pnlPercent.toFixed(1)}%`;
-
-      // Price change from entry
-      const entryDiff = ((p.currentPrice - p.entryPrice) / p.entryPrice * 100).toFixed(1);
-      const entryDiffStr = entryDiff >= 0 ? `+${entryDiff}%` : `${entryDiff}%`;
-      const entryDiffColor = entryDiff >= 0 ? '#3fb950' : '#f85149';
-
-      return `<tr id="row-${p.id}">
-        <td style="color:#8b949e;font-size:0.72rem">${p.id.slice(-8)}</td>
-        <td>${p.platform}</td>
-        <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.market}">${p.market}</td>
-        <td><span class="badge badge-${p.side.toLowerCase()}">${p.side}</span></td>
-        <td class="price-cell">$${p.size.toFixed(0)}</td>
-        <td class="price-cell" style="color:#8b949e;">$${p.entryPrice?.toFixed(4)}</td>
-        <td class="price-cell ${flashClass}" id="px-${p.id}">
-          <span style="font-weight:bold;">$${p.currentPrice?.toFixed(4)}</span>
-          <span style="font-size:0.68rem;color:${arrowColor};margin-left:3px;">${arrow}</span>
-        </td>
-        <td class="price-cell" style="font-size:0.75rem;color:${entryDiffColor};">${entryDiffStr}</td>
-        <td><span class="pnl-badge ${pnlClass}">${pnlStr} <span style="opacity:0.75;font-size:0.68rem;">${pnlPct}</span></span></td>
-        <td style="font-size:0.74rem;color:#8b949e;">${p.stopLoss ? '$'+p.stopLoss.price?.toFixed(3) : '—'}</td>
-        <td style="font-size:0.74rem;color:#8b949e;">${p.takeProfit ? '$'+p.takeProfit.price?.toFixed(3) : '—'}</td>
-        <td>
-          <button onclick="setPriceModal('${p.id}', ${p.currentPrice})" class="secondary-btn" style="width:auto;padding:3px 8px;font-size:0.72rem;margin-bottom:0;" title="Set price manually">✎</button>
-          <button onclick="closePos('${p.id}')" class="danger-btn" style="width:auto;padding:3px 8px;font-size:0.72rem;margin-bottom:0;">✕</button>
-        </td>
+      prevPrices[pid] = parseFloat(cur);
+      const pnlBadge = pnl >= 0
+        ? `<span class="pnl-badge pnl-pos">+$${pnl.toFixed(2)} (${pnlPct.toFixed(1)}%)</span>`
+        : `<span class="pnl-badge pnl-neg">-$${Math.abs(pnl).toFixed(2)} (${pnlPct.toFixed(1)}%)</span>`;
+      const sideB = side === 'YES'
+        ? '<span class="badge badge-yes">YES</span>'
+        : '<span class="badge badge-no">NO</span>';
+      return `<tr>
+        <td title="${mkt}">${mkt.length > 35 ? mkt.slice(0,34)+'…' : mkt}</td>
+        <td>${plt}</td><td>${sideB}</td><td>$${size}</td>
+        <td class="price-cell">$${entry}</td>
+        <td class="price-cell ${flashClass}">$${cur}</td>
+        <td>${pnlBadge}</td>
+        <td><button class="secondary-btn" style="width:auto;padding:4px 10px;font-size:0.75rem;" onclick="closePosition('${pid}')">Close</button></td>
       </tr>`;
-    }).join('');
-
-    const totalPnLClass = totalPnL >= 0 ? 'positive' : 'negative';
-    el.innerHTML = `
-      <div style="display:flex;justify-content:flex-end;gap:16px;margin-bottom:8px;font-size:0.8rem;">
-        <span style="color:#8b949e;">Total Value: <span style="color:#58a6ff;font-weight:bold;">$${totalVal.toFixed(2)}</span></span>
-        <span style="color:#8b949e;">Unrealized P&L: <span class="${totalPnLClass}" style="font-weight:bold;">${totalPnL >= 0 ? '+' : ''}$${Math.abs(totalPnL).toFixed(2)}</span></span>
-      </div>
-      <table>
-        <thead><tr>
-          <th>ID</th><th>Platform</th><th>Market</th><th>Side</th><th>Size</th>
-          <th>Entry</th><th>Current</th><th>Δ Entry</th><th>P&L</th><th>SL</th><th>TP</th><th></th>
-        </tr></thead>
-        <tbody>${rows}</tbody>
-      </table>`;
-
-    // Re-trigger flash animation by forcing reflow
-    positions.forEach(p => {
-      const cell = document.getElementById('px-' + p.id);
-      if (cell && (cell.classList.contains('price-up') || cell.classList.contains('price-dn'))) {
-        void cell.offsetWidth; // reflow
-      }
-    });
+    }).join('')}</tbody></table>`;
   } catch(e) {}
 }
 
-function _clearPrevPrices() {
-  Object.keys(_prevPrices).forEach(k => delete _prevPrices[k]);
-}
-
-// Manual price update modal (simple prompt for now)
-async function setPriceModal(posId, currentPrice) {
-  const val = prompt(`Set current price for position ${posId.slice(-8)}:`, currentPrice.toFixed(4));
-  if (val === null) return;
-  const price = parseFloat(val);
-  if (isNaN(price) || price <= 0) { alert('Invalid price'); return; }
-  try {
-    const res = await fetch('/api/positions/price', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ positionId: posId, price })
-    });
-    const d = await res.json();
-    if (d.success) fetchPositions();
-    else alert('Failed: ' + d.error);
-  } catch(e) { alert('Network error'); }
-}
-
-async function closePos(id) {
+async function closePosition(id) {
   if (!confirm('Close this position?')) return;
-  const res = await fetch('/api/close', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ positionId: id }) });
-  const data = await res.json();
-  if (data.success) {
-    delete _prevPrices[id];
-    fetchPositions();
-    fetchStatus();
-  }
+  try {
+    const r = await fetch('/api/close', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({positionId: id}) });
+    const d = await r.json();
+    if (d.success) { showToast('Position closed', 'ok'); fetchPositions(); fetchStatus(); }
+    else showToast(d.error || 'Failed to close', 'err');
+  } catch(e) { showToast('Error closing position', 'err'); }
 }
 
+// ─── Place Trade (Dashboard) ──────────────────────────────────────────────────
 async function placeTrade() {
   const market = document.getElementById('tradeMarket').value.trim();
   const side = document.getElementById('tradeSide').value;
-  const size = parseFloat(document.getElementById('tradeSize').value);
-  const stopLoss = document.getElementById('tradeStopLoss').value;
-  const takeProfit = document.getElementById('tradeTakeProfit').value;
+  const size = parseFloat(document.getElementById('tradeSize').value) || 0;
+  const sl = parseFloat(document.getElementById('tradeStopLoss').value) || null;
+  const tp = parseFloat(document.getElementById('tradeTakeProfit').value) || null;
   const msgEl = document.getElementById('msg');
-  const aiEl = document.getElementById('tradeAIResult');
   const btn = document.getElementById('tradeBtn');
-
-  if (!market || !size) {
-    msgEl.style.color='#f85149'; msgEl.textContent = 'Market and size are required.';
-    return;
-  }
-
-  // Lock UI and show AI analysis spinner
-  btn.disabled = true;
-  btn.textContent = 'Analyzing...';
-  msgEl.style.color='#8b949e';
+  if (!market) { msgEl.style.color = '#f85149'; msgEl.textContent = 'Market name required'; return; }
+  btn.textContent = 'Executing...'; btn.disabled = true;
   msgEl.textContent = '';
-  aiEl.innerHTML = `<div class="analyzing" style="margin-top:10px;"><div class="spinner"></div>Running AI analysis before execution...</div>`;
-
   try {
-    const res = await fetch('/api/trade', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({
-        market, side, size,
-        stopLoss: stopLoss ? parseFloat(stopLoss) : null,
-        takeProfit: takeProfit ? parseFloat(takeProfit) : null
-      })
-    });
-    const data = await res.json();
-
-    if (data.success) {
-      msgEl.style.color='#3fb950';
-      msgEl.textContent = `Order placed on ${data.platform} @ $${data.entryPrice?.toFixed(3)}`;
-      document.getElementById('tradeMarket').value = '';
-      document.getElementById('tradeSize').value = '';
-      document.getElementById('tradeStopLoss').value = '';
-      document.getElementById('tradeTakeProfit').value = '';
+    const body = { market, side, size, useKelly: size === 0 };
+    if (sl) body.stopLoss = sl;
+    if (tp) body.takeProfit = tp;
+    const r = await fetch('/api/trade', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    const d = await r.json();
+    if (d.success) {
+      msgEl.style.color = '#3fb950';
+      msgEl.textContent = `✓ Order placed @ $${d.entryPrice?.toFixed(3)} on ${d.platform}`;
+      document.getElementById('tradeAIResult').innerHTML = d.aiAnalysis
+        ? `<div class="ai-result" style="margin-top:10px;">
+            <span class="ai-provider-tag">${d.aiAnalysis.best?.provider || 'AI'}</span>
+            <div class="ai-direction ${d.aiAnalysis.best?.direction === 'YES' ? 'positive' : 'negative'}">${d.aiAnalysis.best?.direction} — ${Math.round((d.aiAnalysis.best?.confidence||0)*100)}% conf</div>
+            <div class="ai-reason">${d.aiAnalysis.best?.reason || ''}</div>
+           </div>` : '';
+      showToast(`✓ Trade executed on ${d.platform} @ $${d.entryPrice?.toFixed(3)}`, 'ok');
       fetchPositions(); fetchStatus();
-
-      // Show AI analysis result if returned
-      if (data.aiAnalysis) {
-        renderTradeAIResult(aiEl, data.aiAnalysis, true);
-      } else {
-        aiEl.innerHTML = '<div style="font-size:0.76rem;color:#8b949e;margin-top:8px;">No AI providers configured — order placed without AI gate.</div>';
-      }
     } else {
-      msgEl.style.color='#f85149';
-      msgEl.textContent = data.error || 'Trade failed';
-      // If rejected by AI, render the AI analysis for context even on failure
-      // The error message contains the AI info; clear spinner with rejection state
-      aiEl.innerHTML = `<div class="trade-ai-rejected" style="margin-top:10px;background:#1a0a0a;border:1px solid #6e2020;border-radius:8px;padding:12px;">
-        <div style="color:#f85149;font-size:0.78rem;font-weight:bold;margin-bottom:6px;">AI GATE — ORDER REJECTED</div>
-        <div style="color:#8b949e;font-size:0.76rem;line-height:1.5;">${data.error || 'Confidence below threshold'}</div>
-      </div>`;
+      msgEl.style.color = '#f85149';
+      msgEl.textContent = d.error || 'Trade failed';
+      showToast(d.error || 'Trade failed', 'err');
     }
   } catch(e) {
-    msgEl.style.color='#f85149'; msgEl.textContent = 'Network error';
-    aiEl.innerHTML = '';
+    msgEl.style.color = '#f85149'; msgEl.textContent = 'Network error';
   } finally {
-    btn.disabled = false;
-    btn.textContent = 'Execute Order';
+    btn.textContent = 'Execute Order'; btn.disabled = false;
   }
 }
 
-function renderTradeAIResult(el, d, approved) {
-  const best = d.best;
-  const dirColor = best.direction === 'buy' ? '#3fb950' : best.direction === 'sell' ? '#f85149' : '#e3b341';
-  const confPct = (best.confidence * 100).toFixed(0);
-  const riskPct = (best.riskScore * 100).toFixed(0);
-  const borderColor = approved ? '#1a3d28' : '#6e2020';
-  const statusLabel = approved
-    ? `<span style="background:#1a3d28;color:#3fb950;padding:2px 8px;border-radius:4px;font-size:0.7rem;font-weight:bold;">AI APPROVED</span>`
-    : `<span style="background:#3d1a1a;color:#f85149;padding:2px 8px;border-radius:4px;font-size:0.7rem;font-weight:bold;">AI REJECTED</span>`;
+// ─── REKOMENDASI PAGE ─────────────────────────────────────────────────────────
+let recMarkets = [];
 
-  el.innerHTML = `<div style="margin-top:10px;background:#0d1117;border:1px solid ${borderColor};border-radius:8px;padding:12px;">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
-      ${statusLabel}
-      <span class="ai-provider-tag">${best.provider}</span>
-      <span style="font-size:0.72rem;color:#8b949e;">consensus: ${d.consensus}</span>
+async function loadRecommendations() {
+  const cat = document.getElementById('recCategory').value;
+  const plat = document.getElementById('recPlatform').value;
+  const q = document.getElementById('recSearch').value.trim();
+  const grid = document.getElementById('recGrid');
+  grid.innerHTML = '<div class="empty" style="grid-column:1/-1;"><div class="analyzing"><div class="spinner"></div>Memuat market live...</div></div>';
+
+  try {
+    const params = new URLSearchParams();
+    if (q) params.set('q', q);
+    if (cat) params.set('category', cat);
+    const r = await fetch('/api/markets/search?' + params.toString());
+    let markets = await r.json();
+
+    // Filter by platform client-side if selected
+    if (plat) markets = markets.filter(m => m.platform === plat);
+
+    // Sort by volume descending
+    markets.sort((a, b) => (b.volume || 0) - (a.volume || 0));
+
+    recMarkets = markets;
+    document.getElementById('recCount').textContent = markets.length + ' market ditemukan';
+
+    if (!markets.length) {
+      grid.innerHTML = '<div class="empty" style="grid-column:1/-1;">Tidak ada market yang cocok</div>';
+      return;
+    }
+
+    grid.innerHTML = markets.map((m, i) => renderRecCard(m, i)).join('');
+  } catch(e) {
+    grid.innerHTML = '<div class="empty" style="grid-column:1/-1;">Gagal memuat market</div>';
+  }
+}
+
+function renderRecCard(m, idx) {
+  const price = m.currentPrice || 0;
+  const pricePct = Math.round(price * 100);
+  const noPrice = 100 - pricePct;
+  const priceColor = price >= 0.6 ? '#3fb950' : price >= 0.4 ? '#e3b341' : '#f85149';
+  const platClass = m.platform === 'manifold' ? 'rec-plat-manifold' : m.platform === 'kalshi' ? 'rec-plat-kalshi' : 'rec-plat-polymarket';
+  const vol = m.volume >= 1000000 ? (m.volume/1000000).toFixed(1)+'M' : m.volume >= 1000 ? (m.volume/1000).toFixed(0)+'K' : (m.volume||0).toFixed(0);
+  const endStr = m.endDate ? ' · Tutup ' + m.endDate : '';
+  const safeQ = m.question.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+
+  return `<div class="rec-card" id="rec-card-${idx}">
+    <div class="rec-card-header">
+      <div class="rec-card-top">
+        <span class="rec-platform-badge ${platClass}">${m.platform}</span>
+        <span class="rec-cat-badge">${m.category || 'general'}</span>
+      </div>
+      <div class="rec-question">${m.question.length > 120 ? m.question.slice(0,118)+'…' : m.question}</div>
+      <div class="rec-price-row">
+        <span class="rec-price-label">YES</span>
+        <div class="rec-price-bar-track">
+          <div class="rec-price-bar-yes" style="width:${pricePct}%;background:${priceColor};"></div>
+        </div>
+        <span class="rec-price-val" style="color:${priceColor};">${pricePct}¢</span>
+      </div>
+      <div class="rec-vol">Volume: <span class="vol">$${vol}</span>${endStr}</div>
     </div>
-    <div style="font-size:0.92rem;font-weight:bold;color:${dirColor};margin-bottom:4px;">${best.direction.toUpperCase()} — conf ${confPct}%</div>
-    <div style="font-size:0.76rem;color:#8b949e;margin-bottom:10px;line-height:1.5;">${best.reason || ''}</div>
-    <div class="ai-bar-row">
-      <span class="ai-bar-label">Confidence</span>
-      <div class="ai-bar-track"><div class="ai-bar-fill-conf" style="width:${confPct}%"></div></div>
-      <span class="ai-bar-pct">${confPct}%</span>
-    </div>
-    <div class="ai-bar-row">
-      <span class="ai-bar-label">Risk Score</span>
-      <div class="ai-bar-track"><div class="ai-bar-fill-risk" style="width:${riskPct}%"></div></div>
-      <span class="ai-bar-pct">${riskPct}%</span>
+
+    <button class="rec-analyze-btn" id="rec-btn-${idx}" onclick="analyzeRecCard(${idx}, '${safeQ}')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      Analisis AI
+    </button>
+
+    <div class="rec-analysis" id="rec-analysis-${idx}"></div>
+    <div class="rec-execute" id="rec-execute-${idx}">
+      <div class="rec-execute-title">Eksekusi Trade</div>
+      <div class="rec-exec-row">
+        <input type="number" id="rec-size-${idx}" placeholder="Size ($) — kosong = Kelly otomatis" min="1" step="1" />
+        <input type="number" id="rec-sl-${idx}" placeholder="Stop Loss (opsional)" step="0.01" />
+        <input type="number" id="rec-tp-${idx}" placeholder="Take Profit (opsional)" step="0.01" />
+      </div>
+      <div class="rec-exec-btns">
+        <button class="rec-exec-yes" onclick="execRecTrade(${idx}, '${safeQ}', 'YES')">▲ Beli YES</button>
+        <button class="rec-exec-no"  onclick="execRecTrade(${idx}, '${safeQ}', 'NO')">▼ Beli NO</button>
+      </div>
+      <div class="rec-exec-msg" id="rec-msg-${idx}"></div>
     </div>
   </div>`;
 }
 
-// --- AI Analysis ---
-async function runAnalysis() {
-  const market = document.getElementById('aiMarket').value.trim();
-  const context = document.getElementById('aiContext').value.trim();
-  const el = document.getElementById('aiResult');
-  if (!market) { el.innerHTML = '<div class="empty" style="color:#f85149">Enter a market name first</div>'; return; }
-  el.innerHTML = '<div class="analyzing"><div class="spinner"></div>Analyzing with Gemini + Groq simultaneously...</div>';
+async function analyzeRecCard(idx, question) {
+  const btn = document.getElementById('rec-btn-' + idx);
+  const analysisEl = document.getElementById('rec-analysis-' + idx);
+  const executeEl = document.getElementById('rec-execute-' + idx);
+
+  // Toggle if already shown
+  if (analysisEl.classList.contains('visible')) {
+    analysisEl.classList.remove('visible');
+    executeEl.classList.remove('visible');
+    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> Analisis AI`;
+    return;
+  }
+
+  btn.classList.add('loading');
+  btn.innerHTML = `<div class="spinner" style="width:12px;height:12px;border-width:2px;"></div> Menganalisis...`;
+  analysisEl.innerHTML = '';
+  analysisEl.classList.add('visible');
+  executeEl.classList.remove('visible');
+
   try {
-    const res = await fetch('/api/ai/analyze', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ market, context }) });
-    const data = await res.json();
-    if (data.error) { el.innerHTML = `<div class="empty" style="color:#f85149">${data.error}</div>`; return; }
-    renderAIResult(el, data);
+    const r = await fetch('/api/ai/analyze', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ market: question, context: '' })
+    });
+    const d = await r.json();
+
+    if (!d.success && d.error) {
+      analysisEl.innerHTML = `<div style="color:#f85149;font-size:0.78rem;padding:8px 0;">${d.error}</div>`;
+      btn.classList.remove('loading');
+      btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> Coba Lagi`;
+      return;
+    }
+
+    const best = d.best || {};
+    const dir = best.direction || 'HOLD';
+    const conf = Math.round((best.confidence || 0) * 100);
+    const risk = Math.round((best.riskScore || 0) * 100);
+    const dirClass = dir === 'YES' ? 'rec-dir-buy' : dir === 'NO' ? 'rec-dir-sell' : 'rec-dir-hold';
+    const confColor = conf >= 75 ? '#3fb950' : conf >= 60 ? '#e3b341' : '#f85149';
+    const providers = d.providers || [];
+    const provHTML = providers.filter(p => !p.error).map(p =>
+      `<span style="background:#0d1117;border:1px solid #30363d;border-radius:4px;padding:2px 7px;font-size:0.68rem;color:#8b949e;">
+        <span style="color:#58a6ff;">${p.provider}</span> ${p.direction} ${Math.round(p.confidence*100)}%
+      </span>`
+    ).join('');
+
+    analysisEl.innerHTML = `
+      <div class="rec-ai-header">
+        <span class="rec-direction-badge ${dirClass}">${dir === 'YES' ? '▲ BELI YES' : dir === 'NO' ? '▼ BELI NO' : '⏸ TAHAN'}</span>
+        <span style="font-size:0.7rem;color:#8b949e;">${d.agreingCount || 0}/${d.totalValid || 0} AI setuju</span>
+        <span class="rec-conf-num" style="color:${confColor};">${conf}%</span>
+      </div>
+      <div class="rec-reason">${best.reason || 'No analysis available'}</div>
+      <div class="rec-bars">
+        <div class="rec-bar-row">
+          <span class="rec-bar-label">Confidence</span>
+          <div class="rec-bar-track"><div class="rec-bar-conf" style="width:${conf}%;"></div></div>
+          <span class="rec-bar-pct">${conf}%</span>
+        </div>
+        <div class="rec-bar-row">
+          <span class="rec-bar-label">Risiko</span>
+          <div class="rec-bar-track"><div class="rec-bar-risk" style="width:${risk}%;"></div></div>
+          <span class="rec-bar-pct">${risk}%</span>
+        </div>
+      </div>
+      ${provHTML ? `<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:4px;">${provHTML}</div>` : ''}`;
+
+    // Show execute form
+    executeEl.classList.add('visible');
+
+    btn.classList.remove('loading');
+    btn.innerHTML = `▲ Sembunyikan Analisis`;
+
   } catch(e) {
-    el.innerHTML = '<div class="empty" style="color:#f85149">Request failed — check console</div>';
+    analysisEl.innerHTML = `<div style="color:#f85149;font-size:0.78rem;padding:8px 0;">Gagal terhubung ke AI</div>`;
+    btn.classList.remove('loading');
+    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> Coba Lagi`;
   }
 }
 
-function renderAIResult(el, d) {
-  const best = d.best;
-  const dirColor = best.direction === 'buy' ? '#3fb950' : best.direction === 'sell' ? '#f85149' : '#e3b341';
-  const confPct = (best.confidence * 100).toFixed(0);
-  const riskPct = (best.riskScore * 100).toFixed(0);
+async function execRecTrade(idx, question, side) {
+  const sizeEl = document.getElementById('rec-size-' + idx);
+  const slEl   = document.getElementById('rec-sl-' + idx);
+  const tpEl   = document.getElementById('rec-tp-' + idx);
+  const msgEl  = document.getElementById('rec-msg-' + idx);
+  const size = parseFloat(sizeEl.value) || 0;
+  const sl = parseFloat(slEl.value) || null;
+  const tp = parseFloat(tpEl.value) || null;
 
-  const allHTML = (d.all || []).map(p => {
-    const ok = !p.error;
-    return `<div class="provider-item ${ok ? '' : 'errored'}">
-      <div class="p-name">${p.provider} ${p === d.best ? '★' : ''}</div>
-      ${ok ? `
-        <div style="color:${p.direction==='buy'?'#3fb950':p.direction==='sell'?'#f85149':'#e3b341'};font-size:0.82rem;font-weight:bold;">${p.direction.toUpperCase()}</div>
-        <div style="color:#8b949e;font-size:0.72rem;">conf ${(p.confidence*100).toFixed(0)}% · risk ${(p.riskScore*100).toFixed(0)}% · score ${p.score?.toFixed(3)} · ${p.latencyMs}ms</div>
-        <div style="color:#8b949e;font-size:0.72rem;margin-top:3px;">${p.reason || ''}</div>
-      ` : `<div style="color:#f85149;font-size:0.72rem;">${p.error}</div>`}
-    </div>`;
-  }).join('');
+  msgEl.style.color = '#8b949e';
+  msgEl.textContent = 'Mengeksekusi...';
 
-  el.innerHTML = `
-    <div class="ai-result">
-      <div>
-        <span class="ai-provider-tag">${best.provider}</span>
-        <span class="ai-provider-tag" style="background:#1a3d28;color:#3fb950;">BEST SCORE ${best.score?.toFixed(3)}</span>
-        <span class="ai-provider-tag" style="background:#2d2a1a;color:#e3b341;">consensus: ${d.consensus}</span>
-      </div>
-      <div class="ai-direction" style="color:${dirColor};">${best.direction.toUpperCase()} — ${d.market}</div>
-      <div class="ai-reason">${best.reason}</div>
+  try {
+    const body = { market: question, side, size, useKelly: size === 0 };
+    if (sl) body.stopLoss = sl;
+    if (tp) body.takeProfit = tp;
+    const r = await fetch('/api/trade', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    const d = await r.json();
+    if (d.success) {
+      msgEl.style.color = '#3fb950';
+      msgEl.textContent = `✓ ${side} berhasil @ $${(d.entryPrice||0).toFixed(3)} di ${d.platform} | Size: $${(d.size||0).toFixed(2)}`;
+      showToast(`✓ ${side} di "${question.slice(0,40)}…" @ $${(d.entryPrice||0).toFixed(3)}`, 'ok');
+      fetchPositions();
+      fetchStatus();
+    } else {
+      msgEl.style.color = '#f85149';
+      msgEl.textContent = d.error || 'Trade gagal';
+      showToast(d.error || 'Trade gagal', 'err');
+    }
+  } catch(e) {
+    msgEl.style.color = '#f85149';
+    msgEl.textContent = 'Network error';
+  }
+}
+
+// ─── Signals ─────────────────────────────────────────────────────────────────
+async function fetchSignals() {
+  try {
+    const [sigRes, statusRes, provRes] = await Promise.all([
+      fetch('/api/scanner/signals'),
+      fetch('/api/scanner/status'),
+      fetch('/api/ai/providers')
+    ]);
+    const sigData    = await sigRes.json();
+    const statusData = await statusRes.json();
+    const provData   = await provRes.json();
+
+    const hasKey = provData.groq || provData.anthropic || provData.openai || provData.google;
+    document.getElementById('noKeyNotice').style.display = hasKey ? 'none' : 'block';
+
+    const sb = document.getElementById('scannerStatusBar');
+    const dotClass = statusData.running ? 's-running' : 's-stopped';
+    const lastScan = statusData.lastScanAt ? new Date(statusData.lastScanAt).toLocaleTimeString() : 'Never';
+    const nextScan = statusData.nextScanAt ? new Date(statusData.nextScanAt).toLocaleTimeString() : '--';
+    sb.innerHTML = `
+      <span class="s-dot ${dotClass}"></span>
+      <span class="s-label">Scanner:</span> <span class="s-val">${statusData.running ? 'Running' : 'Stopped'}</span>
+      <span class="s-label">Last scan:</span> <span class="s-val">${lastScan}</span>
+      <span class="s-label">Next scan:</span> <span class="s-val">${nextScan}</span>
+      <span class="s-label">Markets scanned:</span> <span class="s-val">${statusData.marketsScanned || 0}</span>
+      <span class="s-count">${statusData.signalCount || 0} signals</span>
+      <button class="s-refresh" onclick="fetchSignals()">↻ Refresh</button>`;
+
+    const signals = sigData.signals || [];
+    updateSignalBadge(signals.length);
+    const sg = document.getElementById('signalsGrid');
+    if (!signals.length) {
+      sg.innerHTML = hasKey
+        ? '<div class="empty">No high-confidence signals yet — scanner runs every 10 min</div>'
+        : '<div class="empty">Set an AI API key to start scanning</div>';
+      return;
+    }
+    sg.innerHTML = `<div class="signals-grid">${signals.map(s => renderSignalCard(s)).join('')}</div>`;
+  } catch(e) {}
+}
+
+function renderSignalCard(s) {
+  const dir = (s.direction||'').toUpperCase();
+  const conf = Math.round((s.confidence||0)*100);
+  const risk = Math.round((s.riskScore||0)*100);
+  const dirClass = dir === 'YES' ? 'sig-buy' : dir === 'NO' ? 'sig-sell' : 'sig-hold';
+  const badgeClass = dir === 'YES' ? 'sig-dir-buy' : dir === 'NO' ? 'sig-dir-sell' : 'sig-dir-hold';
+  const confClass = conf >= 80 ? 'sig-conf-green' : 'sig-conf-yellow';
+  const confBarColor = conf >= 75 ? '#3fb950' : '#e3b341';
+  const highClass = conf >= 85 ? 'sig-high' : '';
+  const sideLabel = dir === 'YES' ? 'BUY YES' : dir === 'NO' ? 'SELL (BUY NO)' : '';
+  const safeM = (s.market||'').replace(/'/g, "\\'");
+  const ts = s.detectedAt ? new Date(s.detectedAt).toLocaleString() : '';
+  return `<div class="signal-card ${dirClass} ${highClass}">
+    <div class="signal-card-top">
+      <span class="sig-dir-badge ${badgeClass}">${sideLabel || dir}</span>
+      <span class="sig-conf ${confClass}">${conf}%</span>
+    </div>
+    <div class="sig-market">${(s.market||'').length > 80 ? (s.market||'').slice(0,78)+'…' : (s.market||'')}</div>
+    <div class="sig-reason">${s.reason || ''}</div>
+    <div class="sig-meta">
+      <span class="sig-meta-tag">${s.platform || ''}</span>
+      <span class="sig-meta-tag">${s.provider || ''}</span>
+      <span class="sig-meta-tag">consensus: ${s.consensus || '--'}</span>
+      <span class="sig-meta-tag">score: ${(s.score||0).toFixed(2)}</span>
+    </div>
+    <div class="sig-bar-row">
+      <span class="sig-bar-label">Confidence</span>
+      <div class="sig-bar-track"><div class="sig-bar-fill-conf" style="width:${conf}%;background:${confBarColor};border-radius:3px;height:4px;"></div></div>
+      <span class="sig-bar-pct">${conf}%</span>
+    </div>
+    <div class="sig-bar-row">
+      <span class="sig-bar-label">Risk</span>
+      <div class="sig-bar-track"><div class="sig-bar-fill-risk" style="width:${risk}%;"></div></div>
+      <span class="sig-bar-pct">${risk}%</span>
+    </div>
+    <div class="sig-actions">
+      ${dir === 'YES' ? `<button class="sig-trade-btn sig-trade-buy" onclick="tradeSignal('${safeM}','YES')">▲ Buy YES</button>` : ''}
+      ${dir === 'NO'  ? `<button class="sig-trade-btn sig-trade-sell" onclick="tradeSignal('${safeM}','NO')">▼ Buy NO</button>` : ''}
+      <button class="sig-analyze-btn" onclick="analyzeFromSignal('${safeM}')">AI Detail</button>
+    </div>
+    ${ts ? `<div class="sig-time">Detected: ${ts}</div>` : ''}
+  </div>`;
+}
+
+function tradeSignal(market, side) {
+  const dashBtn = document.querySelector('nav button');
+  showPage('dashboard', dashBtn);
+  document.getElementById('tradeMarket').value = market;
+  document.getElementById('tradeSide').value = side;
+  document.getElementById('tradeSize').value = '';
+  const tradeCard = document.getElementById('tradeMarket').closest('.card');
+  tradeCard.style.borderColor = '#1f6feb';
+  tradeCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  setTimeout(() => { tradeCard.style.borderColor = ''; }, 2000);
+  const msgEl = document.getElementById('msg');
+  msgEl.style.color = '#58a6ff';
+  msgEl.textContent = `Signal loaded: ${side} on "${market}" — set a size and click Execute Order.`;
+}
+
+function analyzeFromSignal(market) {
+  const aiBtn = document.querySelectorAll('nav button')[3];
+  showPage('ai', aiBtn);
+  document.getElementById('aiMarket').value = market;
+  runAnalysis();
+}
+
+// ─── AI Analysis Page ─────────────────────────────────────────────────────────
+async function runAnalysis() {
+  const market = document.getElementById('aiMarket').value.trim();
+  const context = document.getElementById('aiContext').value.trim();
+  if (!market) return;
+  const el = document.getElementById('aiResult');
+  el.innerHTML = '<div class="analyzing"><div class="spinner"></div>Analyzing with all AI providers...</div>';
+  try {
+    const r = await fetch('/api/ai/analyze', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({market, context}) });
+    const d = await r.json();
+    if (!d.success && d.error) { el.innerHTML = `<div style="color:#f85149">${d.error}</div>`; return; }
+    const best = d.best || {};
+    const conf = Math.round((best.confidence||0)*100);
+    const risk = Math.round((best.riskScore||0)*100);
+    const dirColor = best.direction === 'YES' ? '#3fb950' : best.direction === 'NO' ? '#f85149' : '#e3b341';
+    el.innerHTML = `<div class="ai-result">
+      <div><span class="ai-provider-tag">${best.provider||'AI'}</span><span style="font-size:0.75rem;color:#8b949e;">${d.agreingCount||0}/${d.totalValid||0} providers agree · consensus: ${d.consensus||'--'}</span></div>
+      <div class="ai-direction" style="color:${dirColor};">${best.direction || 'HOLD'}</div>
+      <div class="ai-reason">${best.reason||''}</div>
       <div class="ai-bars">
-        <div class="ai-bar-row">
-          <span class="ai-bar-label">Confidence</span>
-          <div class="ai-bar-track"><div class="ai-bar-fill-conf" style="width:${confPct}%"></div></div>
-          <span class="ai-bar-pct">${confPct}%</span>
-        </div>
-        <div class="ai-bar-row">
-          <span class="ai-bar-label">Risk Score</span>
-          <div class="ai-bar-track"><div class="ai-bar-fill-risk" style="width:${riskPct}%"></div></div>
-          <span class="ai-bar-pct">${riskPct}%</span>
-        </div>
+        <div class="ai-bar-row"><span class="ai-bar-label">Confidence</span><div class="ai-bar-track"><div class="ai-bar-fill-conf" style="width:${conf}%"></div></div><span class="ai-bar-pct">${conf}%</span></div>
+        <div class="ai-bar-row"><span class="ai-bar-label">Risk</span><div class="ai-bar-track"><div class="ai-bar-fill-risk" style="width:${risk}%"></div></div><span class="ai-bar-pct">${risk}%</span></div>
       </div>
     </div>
-    <div style="font-size:0.75rem;color:#8b949e;margin-bottom:8px;">All providers — analyzed ${new Date(d.analyzedAt).toLocaleTimeString()}</div>
-    <div class="provider-list">${allHTML}</div>`;
+    <div class="provider-list">${(d.providers||[]).map(p => `<div class="provider-item ${p.error?'errored':''}">
+      <div class="p-name">${p.provider}</div>
+      <div>${p.error ? '⚠ '+p.error : p.direction+' — '+(Math.round((p.confidence||0)*100))+'%'}</div>
+      ${!p.error?`<div style="color:#8b949e;font-size:0.72rem;margin-top:3px;">${(p.reason||'').slice(0,60)}${(p.reason||'').length>60?'…':''}</div>`:''}
+    </div>`).join('')}</div>`;
+  } catch(e) { el.innerHTML = '<div style="color:#f85149">Analysis failed</div>'; }
 }
 
 async function fetchProviders() {
   try {
-    const res = await fetch('/api/ai/providers');
-    const d = await res.json();
+    const d = await (await fetch('/api/ai/providers')).json();
     const el = document.getElementById('providerStatus');
-    el.innerHTML = `<div class="provider-list">
-      ${['google','groq','openai','anthropic'].map(p => `
-        <div class="provider-item ${d[p] ? '' : 'errored'}">
-          <div class="p-name">${p} ${p === d.preferred ? '★ preferred' : ''}</div>
-          <div style="color:${d[p]?'#3fb950':'#f85149'};font-size:0.78rem;">${d[p] ? 'API key set ✓' : 'No key'}</div>
-        </div>`).join('')}
-    </div>`;
+    el.innerHTML = `<div class="provider-list">${['google','groq','openai','anthropic'].map(p => `
+      <div class="provider-item ${d[p]?'':'errored'}">
+        <div class="p-name">${p}</div>
+        <div style="color:${d[p]?'#3fb950':'#f85149'}">${d[p]?'✓ Connected':'✗ No API key'}</div>
+      </div>`).join('')}
+    </div>
+    <div style="margin-top:10px;font-size:0.78rem;color:#8b949e;">Preferred: <strong style="color:#58a6ff">${d.preferred}</strong></div>`;
   } catch(e) {}
 }
 
-// --- Risk ---
+// ─── Risk ─────────────────────────────────────────────────────────────────────
 async function fetchRisk() {
   try {
-    const res = await fetch('/api/risk');
-    const d = await res.json();
-    const tradePct = d.dailyTradeMax > 0 ? Math.min(d.dailyTrades / d.dailyTradeMax * 100, 100) : 0;
-    const lossPct = d.maxDailyLoss > 0 ? Math.min(Math.abs(Math.min(d.dailyPnL, 0)) / d.maxDailyLoss * 100, 100) : 0;
-    const ksColor = d.killSwitch ? '#f85149' : '#3fb950';
+    const d = await (await fetch('/api/risk')).json();
+    const ks = d.killSwitch;
+    const consLoss = d.consecutiveLosses || 0;
+    const effConf = Math.round((d.effectiveMinConf||0)*100);
+    const dailyPnL = d.dailyPnL || 0;
+    const dailyLoss = d.dailyLossLimit || 500;
+    const lossUsedPct = Math.min(100, Math.abs(Math.min(0, dailyPnL)) / dailyLoss * 100);
     document.getElementById('riskPanel').innerHTML = `
       <div class="risk-grid">
-        <div class="risk-card ${d.killSwitch ? 'danger' : ''}">
+        <div class="risk-card ${ks ? 'danger' : ''}">
           <div class="risk-label">Kill Switch</div>
-          <div class="risk-value" style="color:${ksColor};">${d.killSwitch ? 'ACTIVE' : 'OFF'}</div>
+          <div class="risk-value" style="color:${ks ? '#f85149' : '#3fb950'}">${ks ? 'ACTIVE' : 'Off'}</div>
         </div>
-        <div class="risk-card ${d.blocked ? 'warning' : ''}">
-          <div class="risk-label">Trading</div>
-          <div class="risk-value" style="color:${d.blocked?'#e3b341':'#3fb950'};">${d.blocked ? 'BLOCKED' : 'ALLOWED'}</div>
-          ${d.blockReason ? `<div style="font-size:0.72rem;color:#8b949e;margin-top:4px;">${d.blockReason}</div>` : ''}
+        <div class="risk-card ${consLoss >= 3 ? 'warning' : ''}">
+          <div class="risk-label">Consecutive Losses</div>
+          <div class="risk-value" style="color:${consLoss >= 3 ? '#e3b341' : '#e6edf3'}">${consLoss}</div>
+        </div>
+        <div class="risk-card">
+          <div class="risk-label">Effective Min Confidence</div>
+          <div class="risk-value">${effConf}%</div>
+          <div class="risk-bar-track"><div class="risk-bar-fill" style="width:${effConf}%;background:#1f6feb;"></div></div>
         </div>
         <div class="risk-card">
           <div class="risk-label">Daily Trades</div>
-          <div class="risk-value neutral">${d.dailyTrades} / ${d.dailyTradeMax || '∞'}</div>
-          <div class="risk-bar-track"><div class="risk-bar-fill" style="width:${tradePct}%;background:${tradePct>80?'#f85149':'#1f6feb'};"></div></div>
+          <div class="risk-value">${d.dailyTrades || 0} / ${d.maxDailyTrades || 20}</div>
+          <div class="risk-bar-track"><div class="risk-bar-fill" style="width:${Math.min(100,(d.dailyTrades||0)/(d.maxDailyTrades||20)*100)}%;background:#1f6feb;"></div></div>
         </div>
-        <div class="risk-card ${lossPct > 80 ? 'danger' : lossPct > 50 ? 'warning' : ''}">
-          <div class="risk-label">Daily Loss Used</div>
-          <div class="risk-value" style="color:${lossPct>80?'#f85149':lossPct>50?'#e3b341':'#3fb950'};">${fmtPnL(d.dailyPnL)}</div>
-          <div style="font-size:0.72rem;color:#8b949e;margin-top:2px;">Max: $${d.maxDailyLoss}</div>
-          <div class="risk-bar-track"><div class="risk-bar-fill" style="width:${lossPct}%;background:${lossPct>80?'#f85149':'#e3b341'};"></div></div>
+        <div class="risk-card ${dailyPnL < -dailyLoss*0.5 ? 'warning' : ''}">
+          <div class="risk-label">Daily P&L</div>
+          <div class="risk-value ${dailyPnL >= 0 ? 'positive' : 'negative'}">${fmtPnL(dailyPnL)}</div>
+          <div class="risk-bar-track"><div class="risk-bar-fill" style="width:${lossUsedPct}%;background:#f85149;"></div></div>
+        </div>
+        <div class="risk-card">
+          <div class="risk-label">Open Positions</div>
+          <div class="risk-value">${d.openPositions || 0} / ${d.maxPositions || 10}</div>
         </div>
       </div>`;
   } catch(e) {}
 }
 
 async function setKillSwitch(enable) {
-  const msgEl = document.getElementById('killMsg');
   try {
-    const res = await fetch('/api/risk/killswitch', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ enable }) });
-    const data = await res.json();
-    msgEl.style.color = enable ? '#f85149' : '#3fb950';
-    msgEl.textContent = enable ? 'Kill switch ENABLED — all new trades blocked.' : 'Kill switch disabled — trading allowed.';
+    const r = await fetch('/api/risk/killswitch', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({enable}) });
+    const d = await r.json();
+    document.getElementById('killMsg').style.color = enable ? '#f85149' : '#3fb950';
+    document.getElementById('killMsg').textContent = enable ? 'Kill switch ENABLED — no new trades.' : 'Kill switch disabled — trading resumed.';
+    showToast(enable ? '🛑 Kill switch enabled' : '✓ Kill switch disabled', enable ? 'err' : 'ok');
     fetchRisk(); fetchStatus();
-  } catch(e) { msgEl.style.color='#f85149'; msgEl.textContent = 'Failed'; }
-}
-
-// --- Analytics ---
-async function fetchAnalytics() {
-  try {
-    const res = await fetch('/api/analytics');
-    const d = await res.json();
-    setText('aTotalTrades', d.totalTrades ?? 0, 'neutral');
-    setText('aTotalClosed', d.totalClosed ?? 0, 'neutral');
-    setPnL('aTotalPnL', d.totalPnL ?? 0);
-    setWinRate(d.winRate ?? 0);
-    setPnL('aAvgPnL', d.avgPnL ?? 0);
-    setPnL('aBestTrade', Math.abs(d.bestTrade ?? 0), true);
-    setPnL('aWorstTrade', -(Math.abs(d.worstTrade ?? 0)), false, true);
-    setText('aDailyTrades', d.dailyTrades ?? 0, 'neutral');
-    renderPlatformBreakdown(d.byPlatform || {});
-    renderJournal(d.recentJournals || []);
   } catch(e) {}
 }
 
-function setText(id, val, cls) {
-  const el = document.getElementById(id);
-  el.textContent = val;
-  el.className = 'metric-value ' + (cls || '');
+// ─── Analytics ────────────────────────────────────────────────────────────────
+async function fetchAnalytics() {
+  try {
+    const d = await (await fetch('/api/analytics')).json();
+    document.getElementById('aTotalTrades').textContent  = d.totalTrades  || 0;
+    document.getElementById('aTotalClosed').textContent  = d.totalClosed  || 0;
+    document.getElementById('aDailyTrades').textContent  = d.dailyTrades  || 0;
+    const tpnl = d.totalPnL || 0;
+    const tpnlEl = document.getElementById('aTotalPnL');
+    tpnlEl.textContent = fmtPnL(tpnl); tpnlEl.className = 'metric-value ' + (tpnl >= 0 ? 'positive' : 'negative');
+    const wr = d.winRate || 0;
+    const wrEl = document.getElementById('aWinRate');
+    wrEl.textContent = wr.toFixed(1) + '%'; wrEl.className = 'metric-value ' + (wr >= 50 ? 'positive' : 'negative');
+    const avg = d.avgPnLPerDay || 0;
+    const avgEl = document.getElementById('aAvgPnL');
+    avgEl.textContent = fmtPnL(avg); avgEl.className = 'metric-value ' + (avg >= 0 ? 'positive' : 'negative');
+    document.getElementById('aBestTrade').textContent  = fmtPnL(d.bestTrade  || 0);
+    document.getElementById('aWorstTrade').textContent = fmtPnL(d.worstTrade || 0);
+
+    const arc = document.getElementById('winRateArc');
+    const circ = 2 * Math.PI * 50;
+    arc.setAttribute('stroke-dasharray', `${(wr/100)*circ} ${circ}`);
+    document.getElementById('winRatePct').textContent = wr.toFixed(1) + '%';
+
+    const pb = document.getElementById('platformBreakdown');
+    if (!d.platformBreakdown || !Object.keys(d.platformBreakdown).length) {
+      pb.innerHTML = '<div class="empty">No trades yet</div>';
+    } else {
+      const maxV = Math.max(...Object.values(d.platformBreakdown));
+      pb.innerHTML = Object.entries(d.platformBreakdown).map(([pl, cnt]) =>
+        `<div class="platform-bar"><span class="platform-name">${pl}</span>
+         <div class="bar-track"><div class="bar-fill" style="width:${maxV > 0 ? cnt/maxV*100 : 0}%"></div></div>
+         <span class="platform-count">${cnt} trades</span></div>`).join('');
+    }
+
+    const jt = document.getElementById('journalTable');
+    if (!d.recentHistory || !d.recentHistory.length) {
+      jt.innerHTML = '<div class="empty">No history yet</div>';
+    } else {
+      jt.innerHTML = `<table><thead><tr><th>Date</th><th>Trades</th><th>P&L</th><th>Note</th></tr></thead>
+        <tbody>${d.recentHistory.map(h => `<tr>
+          <td>${h.date}</td><td>${h.trades}</td>
+          <td class="${(h.pnl||0)>=0?'positive':'negative'}">${fmtPnL(h.pnl||0)}</td>
+          <td style="color:#8b949e;font-size:0.76rem;">${h.note||''}</td>
+        </tr>`).join('')}</tbody></table>`;
+    }
+  } catch(e) {}
 }
 
-function setPnL(id, val, forcePos, forceNeg) {
-  const el = document.getElementById(id);
-  const n = parseFloat(val) || 0;
-  el.textContent = fmtPnL(n);
-  el.className = 'metric-value ' + (forcePos ? 'positive' : forceNeg ? 'negative' : n >= 0 ? 'positive' : 'negative');
-}
-
-function setWinRate(rate) {
-  const pct = parseFloat(rate) || 0;
-  document.getElementById('winRatePct').textContent = pct.toFixed(1) + '%';
-  const circumference = 2 * Math.PI * 50;
-  const arc = document.getElementById('winRateArc');
-  arc.setAttribute('stroke-dasharray', `${(pct/100*circumference).toFixed(1)} ${circumference.toFixed(1)}`);
-  arc.setAttribute('stroke', pct >= 50 ? '#3fb950' : '#f85149');
-}
-
-function renderPlatformBreakdown(byPlatform) {
-  const el = document.getElementById('platformBreakdown');
-  const entries = Object.entries(byPlatform);
-  if (!entries.length) { el.innerHTML = '<div class="empty">No trades yet</div>'; return; }
-  const max = Math.max(...entries.map(([,v]) => v.trades));
-  el.innerHTML = entries.map(([p, s]) => `
-    <div class="platform-bar">
-      <span class="platform-name">${p}</span>
-      <div class="bar-track"><div class="bar-fill" style="width:${max>0?(s.trades/max*100).toFixed(0):0}%"></div></div>
-      <span class="platform-count">${s.trades} trades</span>
-    </div>`).join('');
-}
-
-function renderJournal(journals) {
-  const el = document.getElementById('journalTable');
-  if (!journals.length) { el.innerHTML = '<div class="empty">No journal entries yet</div>'; return; }
-  el.innerHTML = `<table><thead><tr><th>Date</th><th>Trades</th><th>P&L</th><th>Notes</th></tr></thead><tbody>${
-    journals.map(j => `<tr>
-      <td style="color:#58a6ff;font-size:0.75rem">${j.date}</td>
-      <td>${j.trades}</td>
-      <td class="${j.pnl>=0?'positive':'negative'}">${fmtPnL(j.pnl)}</td>
-      <td style="color:#8b949e;font-size:0.72rem;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${j.notes}</td>
-    </tr>`).join('')
-  }</tbody></table>`;
-}
-
-// --- Backtest ---
+// ─── Backtest ─────────────────────────────────────────────────────────────────
 async function runBacktest() {
   const el = document.getElementById('backtestResult');
-  el.innerHTML = '<div class="analyzing"><div class="spinner"></div>Running backtest on trading history...</div>';
+  el.innerHTML = '<div class="analyzing"><div class="spinner"></div>Running backtest...</div>';
   try {
-    const res = await fetch('/api/backtest');
-    const d = await res.json();
-    if (!d.totalTrades) {
-      el.innerHTML = '<div class="empty">No trading history yet — journal entries needed for backtest</div>';
-      return;
-    }
-    const equitySVG = drawEquityCurve(d.equityCurve || []);
+    const d = await (await fetch('/api/backtest')).json();
+    if (d.error) { el.innerHTML = `<div style="color:#f85149">${d.error}</div>`; return; }
+    const pnl = d.totalPnL || 0;
     el.innerHTML = `
       <div class="backtest-grid">
-        <div class="metric"><div class="metric-label">Total Trades</div><div class="metric-value neutral">${d.totalTrades}</div></div>
-        <div class="metric"><div class="metric-label">Win Rate</div><div class="metric-value ${d.winRate>=50?'positive':'negative'}">${d.winRate?.toFixed(1)}%</div></div>
-        <div class="metric"><div class="metric-label">Total P&L</div><div class="metric-value ${d.totalPnL>=0?'positive':'negative'}">${fmtPnL(d.totalPnL)}</div></div>
-        <div class="metric"><div class="metric-label">Max Drawdown</div><div class="metric-value negative">-$${d.maxDrawdown?.toFixed(2)}</div></div>
-        <div class="metric"><div class="metric-label">Sharpe Ratio</div><div class="metric-value ${d.sharpeRatio>=0?'positive':'negative'}">${d.sharpeRatio?.toFixed(2)}</div></div>
-        <div class="metric"><div class="metric-label">Avg Daily P&L</div><div class="metric-value ${d.avgDailyPnL>=0?'positive':'negative'}">${fmtPnL(d.avgDailyPnL)}</div></div>
-        <div class="metric"><div class="metric-label">Best Day</div><div class="metric-value positive">${fmtPnL(d.bestDay)}</div></div>
-        <div class="metric"><div class="metric-label">Worst Day</div><div class="metric-value negative">${fmtPnL(d.worstDay)}</div></div>
+        <div class="metric"><div class="metric-label">Total Trades</div><div class="metric-value neutral">${d.totalTrades||0}</div></div>
+        <div class="metric"><div class="metric-label">Wins</div><div class="metric-value positive">${d.wins||0}</div></div>
+        <div class="metric"><div class="metric-label">Losses</div><div class="metric-value negative">${d.losses||0}</div></div>
+        <div class="metric"><div class="metric-label">Win Rate</div><div class="metric-value ${(d.winRate||0)>=50?'positive':'negative'}">${(d.winRate||0).toFixed(1)}%</div></div>
+        <div class="metric"><div class="metric-label">Total P&L</div><div class="metric-value ${pnl>=0?'positive':'negative'}">${fmtPnL(pnl)}</div></div>
+        <div class="metric"><div class="metric-label">Avg P&L/Trade</div><div class="metric-value">${fmtPnL(d.avgPnL||0)}</div></div>
+        <div class="metric"><div class="metric-label">Max Drawdown</div><div class="metric-value negative">${fmtPnL(d.maxDrawdown||0)}</div></div>
+        <div class="metric"><div class="metric-label">Sharpe Ratio</div><div class="metric-value">${(d.sharpeRatio||0).toFixed(2)}</div></div>
       </div>
-      <div style="margin-top:12px">
-        <div style="font-size:0.75rem;color:#8b949e;margin-bottom:6px;">Equity Curve</div>
-        ${equitySVG}
-      </div>`;
-  } catch(e) {
-    el.innerHTML = '<div class="empty" style="color:#f85149">Backtest failed</div>';
-  }
+      ${d.equityCurve && d.equityCurve.length > 1 ? renderEquityCurve(d.equityCurve) : ''}`;
+  } catch(e) { el.innerHTML = '<div style="color:#f85149">Backtest failed</div>'; }
 }
 
-function drawEquityCurve(curve) {
-  if (!curve.length) return '<div class="empty">No data</div>';
-  const W = 800, H = 100, pad = 10;
-  const min = Math.min(...curve, 0);
-  const max = Math.max(...curve, 0);
+function renderEquityCurve(curve) {
+  const W = 600, H = 120, pad = 12;
+  const min = Math.min(...curve), max = Math.max(...curve);
   const range = max - min || 1;
   const pts = curve.map((v, i) => {
-    const x = pad + (i / (curve.length - 1 || 1)) * (W - pad*2);
-    const y = H - pad - ((v - min) / range) * (H - pad*2);
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
+    const x = pad + (i / (curve.length - 1)) * (W - 2*pad);
+    const y = H - pad - ((v - min) / range) * (H - 2*pad);
+    return `${x},${y}`;
   }).join(' ');
-  const zeroY = (H - pad - ((0 - min) / range) * (H - pad*2)).toFixed(1);
-  const lastVal = curve[curve.length - 1];
-  const color = lastVal >= 0 ? '#3fb950' : '#f85149';
-  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:${H}px;background:#0d1117;border-radius:6px;border:1px solid #30363d;">
-    <line x1="${pad}" y1="${zeroY}" x2="${W-pad}" y2="${zeroY}" stroke="#30363d" stroke-width="1" stroke-dasharray="4,4"/>
-    <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"/>
+  const lastVal = curve[curve.length-1];
+  const lineColor = lastVal >= curve[0] ? '#3fb950' : '#f85149';
+  return `<svg class="equity-chart" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+    <polyline points="${pts}" fill="none" stroke="${lineColor}" stroke-width="2" stroke-linejoin="round"/>
+    <line x1="${pad}" y1="${H-pad}" x2="${W-pad}" y2="${H-pad}" stroke="#21262d" stroke-width="1"/>
   </svg>`;
 }
 
-// --- Markets ---
+// ─── Markets Page ─────────────────────────────────────────────────────────────
 async function searchMarkets() {
-  const q = document.getElementById('searchQuery').value;
-  const category = document.getElementById('searchCategory').value;
+  const q = document.getElementById('searchQuery').value.trim();
+  const cat = document.getElementById('searchCategory').value;
   const params = new URLSearchParams();
   if (q) params.set('q', q);
-  if (category) params.set('category', category);
-  const res = await fetch('/api/markets/search?' + params);
-  renderMarkets('marketResults', await res.json(), 'No markets found');
+  if (cat) params.set('category', cat);
+  try {
+    const data = await (await fetch('/api/markets/search?' + params.toString())).json();
+    const el = document.getElementById('marketResults');
+    if (!data.length) { el.innerHTML = '<div class="empty">No markets found</div>'; return; }
+    el.innerHTML = data.map(m => {
+      const price = m.currentPrice ? Math.round(m.currentPrice * 100) + '¢' : '--';
+      const vol = m.volume >= 1000000 ? '$'+(m.volume/1000000).toFixed(1)+'M' : m.volume >= 1000 ? '$'+(m.volume/1000).toFixed(0)+'K' : '$'+(m.volume||0).toFixed(0);
+      return `<div class="market-item">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:0.78rem;">${m.question}</span>
+          <span style="margin-left:auto;font-weight:bold;color:${m.currentPrice >= 0.6 ? '#3fb950' : m.currentPrice >= 0.4 ? '#e3b341' : '#f85149'}">${price}</span>
+        </div>
+        <div class="market-meta">${m.platform} · ${m.category} · Vol: <span class="vol">${vol}</span> · Ends: ${m.endDate||'?'}</div>
+      </div>`;
+    }).join('');
+  } catch(e) {}
 }
 
 async function fetchTrending() {
   try {
-    const markets = await (await fetch('/api/markets/trending')).json();
-    renderMarkets('trendingMarkets', markets, 'No trending markets');
+    const data = await (await fetch('/api/markets/trending')).json();
+    const el = document.getElementById('trendingMarkets');
+    if (!data.length) { el.innerHTML = '<div class="empty">No markets</div>'; return; }
+    el.innerHTML = data.map(m => {
+      const price = m.currentPrice ? Math.round(m.currentPrice * 100) + '¢' : '--';
+      const vc = m.volumeChange;
+      const vcStr = vc !== undefined ? (vc >= 0 ? `<span class="positive">+${vc}%</span>` : `<span class="negative">${vc}%</span>`) : '';
+      const vol = m.volume >= 1000000 ? '$'+(m.volume/1000000).toFixed(1)+'M' : m.volume >= 1000 ? '$'+(m.volume/1000).toFixed(0)+'K' : '$'+(m.volume||0).toFixed(0);
+      return `<div class="market-item">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:0.78rem;">${m.question}</span>
+          <span style="margin-left:auto;font-weight:bold;color:${m.currentPrice >= 0.6 ? '#3fb950' : m.currentPrice >= 0.4 ? '#e3b341' : '#f85149'}">${price}</span>
+        </div>
+        <div class="market-meta">${m.platform} · ${m.category} · Vol: <span class="vol">${vol}</span> ${vcStr}</div>
+      </div>`;
+    }).join('');
   } catch(e) {}
 }
 
-function renderMarkets(elId, markets, emptyMsg) {
-  const el = document.getElementById(elId);
-  if (!markets.length) { el.innerHTML = `<div class="empty">${emptyMsg}</div>`; return; }
-  el.innerHTML = markets.map(m => `
-    <div class="market-item">
-      <div>${m.question}</div>
-      <div class="market-meta">
-        <span style="color:#58a6ff">${m.platform}</span> &bull; ${m.category} &bull;
-        Vol: <span class="vol">$${(m.volume/1000).toFixed(0)}K</span> &bull; Ends: ${m.endDate}
-        ${m.volumeChange !== undefined ? ` &bull; <span class="${m.volumeChange>=0?'positive':'negative'}">${m.volumeChange>=0?'+':''}${m.volumeChange}%</span>` : ''}
-      </div>
-    </div>`).join('');
-}
-
-// --- Signals ---
-let _signalProviders = null;
-
-async function fetchSignals() {
-  // Check providers (only once per session)
-  if (!_signalProviders) {
-    try {
-      const pr = await (await fetch('/api/ai/providers')).json();
-      _signalProviders = pr;
-    } catch(e) { _signalProviders = {}; }
-  }
-  const noKeys = !(_signalProviders.google || _signalProviders.groq || _signalProviders.openai || _signalProviders.anthropic);
-  document.getElementById('noKeyNotice').style.display = noKeys ? 'block' : 'none';
-
-  await Promise.all([fetchScannerStatus(), fetchScannerSignals()]);
-}
-
-async function fetchScannerStatus() {
-  try {
-    const d = await (await fetch('/api/scanner/status')).json();
-    const bar = document.getElementById('scannerStatusBar');
-    const lastScan = d.lastScanAt ? new Date(d.lastScanAt).toLocaleTimeString() : 'never';
-    const nextScan = d.nextScanAt ? new Date(d.nextScanAt).toLocaleTimeString() : '—';
-    bar.innerHTML = `
-      <span class="s-dot ${d.running ? 's-running' : 's-stopped'}"></span>
-      <span class="${d.running ? 'stat-val' : 's-label'}">${d.running ? 'SCANNING' : 'STOPPED'}</span>
-      <span class="s-label">Last scan:</span><span class="s-val">${lastScan}</span>
-      <span class="s-label">Next scan:</span><span class="s-val">${nextScan}</span>
-      <span class="s-label">Markets scanned:</span><span class="s-val">${d.marketsScanned}</span>
-      <span class="s-label">Min conf:</span><span class="s-val">${(d.minSignalConf * 100).toFixed(0)}%</span>
-      <span class="s-count">${d.signalCount} signal${d.signalCount !== 1 ? 's' : ''}</span>
-      <button class="s-refresh" onclick="fetchSignals()">↻ Refresh</button>`;
-  } catch(e) {}
-}
-
-async function fetchScannerSignals() {
-  try {
-    const d = await (await fetch('/api/scanner/signals')).json();
-    const grid = document.getElementById('signalsGrid');
-    const signals = d.signals || [];
-
-    // Update nav badge
-    updateSignalBadge(signals.length);
-
-    if (!signals.length) {
-      grid.innerHTML = `<div class="empty">No signals yet — scanner needs AI provider keys to detect opportunities.<br>Markets are scanned every 10 minutes once keys are configured.</div>`;
-      return;
-    }
-
-    grid.innerHTML = `<div class="signals-grid">${signals.map((s, i) => renderSignalCard(s, i)).join('')}</div>`;
-  } catch(e) {
-    document.getElementById('signalsGrid').innerHTML = '<div class="empty" style="color:#f85149">Failed to load signals</div>';
-  }
-}
-
-function renderSignalCard(s, idx) {
-  const conf = Math.round(s.confidence * 100);
-  const risk = Math.round(s.riskScore * 100);
-  const dir = s.direction || 'hold';
-  const isHigh = s.confidence >= 0.85;
-  const confColor = s.confidence >= 0.85 ? '#3fb950' : '#e3b341';
-  const confBarColor = s.confidence >= 0.85 ? '#3fb950' : '#e3b341';
-  const detectedAt = s.detectedAt ? new Date(s.detectedAt).toLocaleTimeString() : '';
-  const rank = idx === 0 ? '<span style="background:#2d2a1a;color:#e3b341;padding:2px 7px;border-radius:4px;font-size:0.68rem;font-weight:bold;">TOP SIGNAL</span>' :
-               idx === 1 ? '<span style="background:#1a3028;color:#58a6ff;padding:2px 7px;border-radius:4px;font-size:0.68rem;">#2</span>' : '';
-
-  const tradeBtn = dir === 'hold'
-    ? `<button class="sig-trade-btn" style="flex:1;padding:7px 12px;border-radius:6px;font-size:0.78rem;border:1px solid #30363d;color:#8b949e;background:transparent;cursor:not-allowed;" disabled>HOLD — No trade</button>`
-    : dir === 'buy'
-      ? `<button class="sig-trade-btn sig-trade-buy" onclick="tradeSignal(${JSON.stringify(s.market)}, 'YES')">▲ Trade YES</button>`
-      : `<button class="sig-trade-btn sig-trade-sell" onclick="tradeSignal(${JSON.stringify(s.market)}, 'NO')">▼ Trade NO</button>`;
-
-  return `<div class="signal-card sig-${dir} ${isHigh ? 'sig-high' : ''}">
-    <div class="signal-card-top">
-      <span class="sig-dir-badge sig-dir-${dir}">${dir.toUpperCase()}</span>
-      ${rank}
-      <span class="sig-meta-tag" style="margin-left:auto;">${s.platform || ''}</span>
-      <span class="sig-conf ${conf >= 85 ? 'sig-conf-green' : 'sig-conf-yellow'}">${conf}%</span>
-    </div>
-    <div class="sig-market">${s.market}</div>
-    <div class="sig-reason">${s.reason || 'No reason provided'}</div>
-    <div class="sig-meta">
-      <span class="sig-meta-tag">provider: ${s.provider || '—'}</span>
-      <span class="sig-meta-tag">consensus: ${s.consensus || '—'}</span>
-      <span class="sig-meta-tag">score: ${s.score ? s.score.toFixed(3) : '—'}</span>
-    </div>
-    <div class="sig-bar-row">
-      <span class="sig-bar-label">Confidence</span>
-      <div class="sig-bar-track"><div class="sig-bar-fill-conf" style="width:${conf}%;background:${confBarColor};"></div></div>
-      <span class="sig-bar-pct">${conf}%</span>
-    </div>
-    <div class="sig-bar-row">
-      <span class="sig-bar-label">Risk Score</span>
-      <div class="sig-bar-track"><div class="sig-bar-fill-risk" style="width:${risk}%;"></div></div>
-      <span class="sig-bar-pct">${risk}%</span>
-    </div>
-    <div class="sig-actions">
-      ${tradeBtn}
-      <button class="sig-analyze-btn" onclick="analyzeFromSignal(${JSON.stringify(s.market)})">Analyze ↗</button>
-    </div>
-    <div class="sig-time">Detected ${detectedAt}</div>
-  </div>`;
-}
-
-// Trade a signal — navigate to dashboard, pre-fill the trade form
-function tradeSignal(market, side) {
-  // Switch to dashboard
-  const dashBtn = document.querySelector('nav button');
-  showPage('dashboard', dashBtn);
-  dashBtn.classList.add('active');
-
-  // Pre-fill the trade form
-  document.getElementById('tradeMarket').value = market;
-  document.getElementById('tradeSide').value = side;
-  document.getElementById('tradeSize').value = '';
-
-  // Scroll the trade form into view and highlight it
-  const tradeCard = document.getElementById('tradeMarket').closest('.card');
-  tradeCard.style.borderColor = '#1f6feb';
-  tradeCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  setTimeout(() => { tradeCard.style.borderColor = ''; }, 2000);
-
-  // Show a hint
-  const msgEl = document.getElementById('msg');
-  msgEl.style.color = '#58a6ff';
-  msgEl.textContent = `Signal loaded: ${side} on "${market}" — set a size and click Execute Order.`;
-}
-
-// Analyze a signal market from the AI page
-function analyzeFromSignal(market) {
-  const aiBtn = document.querySelectorAll('nav button')[2]; // AI Analysis button
-  showPage('ai', aiBtn);
-  document.getElementById('aiMarket').value = market;
-  runAnalysis();
-}
-
-// Update the signal count badge on the nav button
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 function updateSignalBadge(count) {
   const navBtn = document.getElementById('navSignals');
   if (!navBtn) return;
   let badge = navBtn.querySelector('.sig-nav-badge');
   if (count > 0) {
-    if (!badge) {
-      badge = document.createElement('span');
-      badge.className = 'sig-nav-badge';
-      navBtn.appendChild(badge);
-    }
+    if (!badge) { badge = document.createElement('span'); badge.className = 'sig-nav-badge'; navBtn.appendChild(badge); }
     badge.textContent = count;
-  } else {
-    if (badge) badge.remove();
-  }
+  } else { if (badge) badge.remove(); }
 }
 
-// Poll signal count in background to update nav badge
 async function pollSignalCount() {
   try {
     const d = await (await fetch('/api/scanner/status')).json();
@@ -1058,7 +1168,6 @@ async function pollSignalCount() {
   } catch(e) {}
 }
 
-// --- Helpers ---
 function fmtPnL(v) {
   const n = parseFloat(v) || 0;
   return (n >= 0 ? '+' : '') + '$' + Math.abs(n).toFixed(2);
@@ -1067,11 +1176,11 @@ function fmtPnL(v) {
 function init() {
   fetchStatus();
   fetchPositions();
-  fetchProviders(); // prime provider cache silently
-  pollSignalCount(); // initial badge count
+  fetchProviders();
+  pollSignalCount();
   setInterval(fetchStatus, 10000);
-  setInterval(fetchPositions, 4000);  // live price feed — every 4s
-  setInterval(pollSignalCount, 30000); // keep badge fresh every 30s
+  setInterval(fetchPositions, 4000);
+  setInterval(pollSignalCount, 30000);
 }
 init();
 </script>
