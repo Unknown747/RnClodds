@@ -61,7 +61,7 @@ func NewTradingBot(cfg *Config, mem *MemoryManager) *TradingBot {
                 config:      cfg,
                 memory:      mem,
                 positions:   NewPositionManager(5000),
-                router:      NewSmartRouter(cfg.Platforms.PredictionMarkets, cfg.TradingMode),
+                router:      NewSmartRouter(cfg.Platforms.PredictionMarkets, cfg.TradingMode, mi),
                 marketIndex: mi,
                 aiEngine:    ai,
                 riskMgr:     NewRiskManager(cfg, mem, cfg.UserID),

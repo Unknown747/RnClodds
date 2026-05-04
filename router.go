@@ -31,23 +31,23 @@ type PlatformResult struct {
 }
 
 type Route struct {
-	Platform        string  `json:"platform"`
-	Mode            string  `json:"mode"`
-	ExpectedPrice   float64 `json:"expectedPrice"`
+	Platform         string  `json:"platform"`
+	Mode             string  `json:"mode"`
+	ExpectedPrice    float64 `json:"expectedPrice"`
 	ExpectedSlippage float64 `json:"expectedSlippage"`
-	Fees            float64 `json:"fees"`
-	NetCost         float64 `json:"netCost"`
-	FillProbability float64 `json:"fillProbability"`
-	Score           float64 `json:"score"`
+	Fees             float64 `json:"fees"`
+	NetCost          float64 `json:"netCost"`
+	FillProbability  float64 `json:"fillProbability"`
+	Score            float64 `json:"score"`
 }
 
 type OrderExecution struct {
-	OrderID      string    `json:"orderId"`
-	Platform     string    `json:"platform"`
-	FillPrice    float64   `json:"fillPrice"`
-	ActualSlippage float64 `json:"actualSlippage"`
-	Fees         float64   `json:"fees"`
-	ExecutedAt   time.Time `json:"executedAt"`
+	OrderID        string    `json:"orderId"`
+	Platform       string    `json:"platform"`
+	FillPrice      float64   `json:"fillPrice"`
+	ActualSlippage float64   `json:"actualSlippage"`
+	Fees           float64   `json:"fees"`
+	ExecutedAt     time.Time `json:"executedAt"`
 }
 
 type SplitLeg struct {
@@ -68,9 +68,11 @@ type SmartRouter struct {
 	defaultMode   string
 	fees          map[string]FeeStructure
 	liquidityData map[string]LiquidityData
+	// marketIndex provides live prices from real prediction market APIs.
+	marketIndex *MarketIndex
 }
 
-func NewSmartRouter(platforms []string, defaultMode string) *SmartRouter {
+func NewSmartRouter(platforms []string, defaultMode string, mi *MarketIndex) *SmartRouter {
 	if len(platforms) == 0 {
 		platforms = []string{"polymarket", "kalshi", "manifold"}
 	}
@@ -80,6 +82,7 @@ func NewSmartRouter(platforms []string, defaultMode string) *SmartRouter {
 	return &SmartRouter{
 		platforms:   platforms,
 		defaultMode: defaultMode,
+		marketIndex: mi,
 		fees: map[string]FeeStructure{
 			"polymarket": {Maker: 0, Taker: 0, Note: "Zero fees on most markets"},
 			"kalshi":     {Maker: 0.17, Taker: 1.2, Note: "Formula-based, capped ~2%"},
@@ -163,9 +166,11 @@ func (r *SmartRouter) FindBestRoute(market, side string, size float64, mode stri
 }
 
 func (r *SmartRouter) compare(market, side string, size float64) []PlatformResult {
+	// Pull the live base price from the MarketIndex (real API data).
+	basePrice := r.getLivePrice(market)
+
 	results := make([]PlatformResult, 0, len(r.platforms))
 	for _, platform := range r.platforms {
-		basePrice := r.getBasePrice(market)
 		price := r.getPlatformPrice(platform, basePrice, side)
 
 		feeStructure := r.fees[platform]
@@ -254,29 +259,32 @@ func (r *SmartRouter) SplitOrder(market, side string, size, maxSlippage float64)
 	return &SplitOrder{Legs: legs, TotalSlippage: totalSlippage, AvgPrice: avgPrice}
 }
 
-func (r *SmartRouter) getBasePrice(market string) float64 {
-	prices := map[string]float64{
-		"trump-2028":   0.52,
-		"fed-rate-cut": 0.45,
-		"btc-100k":     0.38,
-	}
-	if p, ok := prices[market]; ok {
-		return p
+// getLivePrice fetches the current YES probability for a market from the live
+// MarketIndex (which pulls from real Manifold / Polymarket APIs).
+func (r *SmartRouter) getLivePrice(market string) float64 {
+	if r.marketIndex != nil {
+		return r.marketIndex.GetPrice(market)
 	}
 	return 0.50
 }
 
+// getPlatformPrice applies a small per-platform spread on top of the live base price.
+// Real arbitrage differences between platforms are typically < 1–2%.
 func (r *SmartRouter) getPlatformPrice(platform string, basePrice float64, side string) float64 {
-	multipliers := map[string]float64{
-		"polymarket": 1.00,
-		"kalshi":     1.01,
-		"manifold":   1.02,
+	spreads := map[string]float64{
+		"polymarket": 0.000, // tightest spread, highest liquidity
+		"kalshi":     0.010, // ~1% wider
+		"manifold":   0.020, // play money, wider spreads
 	}
-	m, ok := multipliers[platform]
+	spread, ok := spreads[platform]
 	if !ok {
-		m = 1.00
+		spread = 0.005
 	}
-	return basePrice * m
+	// For YES bets, ask price is base + half spread; for NO it's (1-base) + half spread
+	if side == "NO" {
+		basePrice = 1.0 - basePrice
+	}
+	return math.Min(0.99, math.Max(0.01, basePrice+spread))
 }
 
 func (r *SmartRouter) createRoute(p PlatformResult, mode string) *Route {

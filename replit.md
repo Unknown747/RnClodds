@@ -19,8 +19,9 @@ ai_engine.go        - Multi-provider AI consensus (Gemini, Groq, OpenAI, Anthrop
 risk_manager.go     - Adaptive risk: Kelly criterion, consecutive loss protection, daily limits, kill switch
 scanner.go          - Background opportunity scanner: scans all markets every N minutes
 position_manager.go - Position tracking, stop-loss/take-profit/trailing stop
-router.go           - Smart order routing across prediction market platforms
-market_index.go     - Market discovery and search (mock data, stopCh-controlled goroutine)
+router.go           - Smart order routing; prices come from live MarketIndex (real API data)
+market_fetcher.go   - Live market data clients: Manifold (search-markets API) + Kalshi (elections API)
+market_index.go     - Market discovery and search; fetches live data on startup + every 5 min, fallback to mock
 memory_manager.go   - SQLite persistence: upsert-safe for journals, preferences, rules, trade logs
 analytics.go        - Historical analytics queries (MemoryManager.GetAnalytics)
 cache.go            - In-memory TTL cache with stoppable eviction goroutine

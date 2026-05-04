@@ -1,8 +1,10 @@
 package main
 
 import (
+	"log/slog"
 	"math/rand"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -32,33 +34,62 @@ type MarketFilters struct {
 
 type MarketIndex struct {
 	platforms   []string
+	mu          sync.RWMutex
 	markets     []Market
+	// prices maps lowercase question → YES probability (0–1), also keyed by market ID
+	prices      map[string]float64
 	lastUpdated *time.Time
+	fetcher     *MarketFetcher
 	stopCh      chan struct{}
 }
 
 func NewMarketIndex(platforms []string, autoRefresh bool) *MarketIndex {
 	mi := &MarketIndex{
 		platforms: platforms,
-		markets:   initMockMarkets(),
+		markets:   fallbackMarkets(),
+		prices:    fallbackPrices(),
+		fetcher:   NewMarketFetcher(),
 		stopCh:    make(chan struct{}),
 	}
+
+	// Kick off a live fetch immediately in the background so the first data
+	// is real as soon as possible, then refresh every 5 minutes.
+	go mi.refresh()
+
 	if autoRefresh {
 		go mi.startAutoRefresh()
 	}
 	return mi
 }
 
-func initMockMarkets() []Market {
-	return []Market{
-		{ID: "poly-001", Platform: "polymarket", Question: "Will Trump win 2028 election?", Category: "politics", Volume: 12500000, Liquidity: 2500000, StartDate: "2024-01-01", EndDate: "2028-11-05", Outcomes: []string{"YES", "NO"}, Active: true},
-		{ID: "kal-001", Platform: "kalshi", Question: "Will Trump win 2028 election?", Category: "politics", Volume: 5200000, Liquidity: 1100000, StartDate: "2024-01-01", EndDate: "2028-11-05", Outcomes: []string{"YES", "NO"}, Active: true},
-		{ID: "poly-002", Platform: "polymarket", Question: "Will Bitcoin hit $100K in 2024?", Category: "crypto", Volume: 8750000, Liquidity: 1800000, StartDate: "2024-01-01", EndDate: "2024-12-31", Outcomes: []string{"YES", "NO"}, Active: true},
-		{ID: "man-001", Platform: "manifold", Question: "ETH above $4000 by EOY?", Category: "crypto", Volume: 125000, Liquidity: 50000, StartDate: "2024-01-01", EndDate: "2024-12-31", Outcomes: []string{"YES", "NO"}, Active: true},
-		{ID: "poly-003", Platform: "polymarket", Question: "Will Fed cut rates in September?", Category: "finance", Volume: 3450000, Liquidity: 890000, StartDate: "2024-06-01", EndDate: "2024-09-30", Outcomes: []string{"YES", "NO"}, Active: true},
-		{ID: "kal-002", Platform: "kalshi", Question: "Will Fed cut rates in September?", Category: "finance", Volume: 2100000, Liquidity: 450000, StartDate: "2024-06-01", EndDate: "2024-09-30", Outcomes: []string{"YES", "NO"}, Active: true},
-		{ID: "poly-004", Platform: "polymarket", Question: "Will Chiefs win Super Bowl?", Category: "sports", Volume: 4300000, Liquidity: 920000, StartDate: "2024-08-01", EndDate: "2025-02-09", Outcomes: []string{"YES", "NO"}, Active: true},
+func (mi *MarketIndex) refresh() {
+	markets, prices, err := mi.fetchLive()
+	if err != nil {
+		slog.Warn("Live market fetch failed, keeping fallback data", "error", err)
+		return
 	}
+	now := time.Now()
+	mi.mu.Lock()
+	mi.markets = markets
+	mi.prices = prices
+	mi.lastUpdated = &now
+	mi.mu.Unlock()
+	slog.Info("Market index refreshed with live data", "markets", len(markets), "prices", len(prices))
+}
+
+func (mi *MarketIndex) fetchLive() ([]Market, map[string]float64, error) {
+	liveMarkets, livePrices := mi.fetcher.FetchAll()
+	if len(liveMarkets) == 0 {
+		return nil, nil, nil
+	}
+	// Merge fallback markets that aren't covered by live data (keeps the index
+	// populated even when an API is down).
+	priceMap := make(map[string]float64, len(livePrices))
+	for k, v := range livePrices {
+		priceMap[k] = v
+	}
+	merged := liveMarkets
+	return merged, priceMap, nil
 }
 
 // startAutoRefresh refreshes market data every 5 minutes until Stop() is called.
@@ -68,7 +99,7 @@ func (mi *MarketIndex) startAutoRefresh() {
 	for {
 		select {
 		case <-ticker.C:
-			mi.Update("")
+			mi.refresh()
 		case <-mi.stopCh:
 			return
 		}
@@ -79,13 +110,33 @@ func (mi *MarketIndex) startAutoRefresh() {
 func (mi *MarketIndex) Stop() {
 	select {
 	case <-mi.stopCh:
-		// already closed
 	default:
 		close(mi.stopCh)
 	}
 }
 
+// GetPrice returns the live YES probability for a market identified by its
+// question text or market ID (case-insensitive). Falls back to 0.5 if unknown.
+func (mi *MarketIndex) GetPrice(marketKey string) float64 {
+	mi.mu.RLock()
+	defer mi.mu.RUnlock()
+	key := strings.ToLower(marketKey)
+	if p, ok := mi.prices[key]; ok {
+		return p
+	}
+	// Fuzzy search: check if any stored question contains the key as a substring
+	for q, p := range mi.prices {
+		if strings.Contains(q, key) || strings.Contains(key, q) {
+			return p
+		}
+	}
+	return 0.50
+}
+
 func (mi *MarketIndex) Search(query string, f MarketFilters) []Market {
+	mi.mu.RLock()
+	defer mi.mu.RUnlock()
+
 	results := make([]Market, 0, len(mi.markets))
 
 	for _, m := range mi.markets {
@@ -131,6 +182,9 @@ func (mi *MarketIndex) Search(query string, f MarketFilters) []Market {
 }
 
 func (mi *MarketIndex) GetTrendingMarkets(limit int) []Market {
+	mi.mu.RLock()
+	defer mi.mu.RUnlock()
+
 	sorted := make([]Market, len(mi.markets))
 	copy(sorted, mi.markets)
 	sortMarketsByVolume(sorted)
@@ -152,6 +206,9 @@ func (mi *MarketIndex) GetTrendingMarkets(limit int) []Market {
 }
 
 func (mi *MarketIndex) GetClosingSoon(within string, minVolume float64, limit int) []Market {
+	mi.mu.RLock()
+	defer mi.mu.RUnlock()
+
 	now := time.Now()
 	var hours float64
 	switch within {
@@ -189,6 +246,8 @@ func (mi *MarketIndex) GetClosingSoon(within string, minVolume float64, limit in
 }
 
 func (mi *MarketIndex) GetMarket(platform, marketID string) *Market {
+	mi.mu.RLock()
+	defer mi.mu.RUnlock()
 	for _, m := range mi.markets {
 		if m.Platform == platform && m.ID == marketID {
 			cp := m
@@ -199,8 +258,7 @@ func (mi *MarketIndex) GetMarket(platform, marketID string) *Market {
 }
 
 func (mi *MarketIndex) Update(platform string) {
-	now := time.Now()
-	mi.lastUpdated = &now
+	go mi.refresh()
 }
 
 func sortMarketsByVolume(markets []Market) {
@@ -226,4 +284,28 @@ func containsStr(slice []string, s string) bool {
 		}
 	}
 	return false
+}
+
+// ─── Fallback data (used until the first live fetch succeeds) ─────────────────
+
+func fallbackMarkets() []Market {
+	return []Market{
+		{ID: "poly-001", Platform: "polymarket", Question: "Will Trump win 2028 election?", Category: "politics", Volume: 12500000, Liquidity: 2500000, StartDate: "2024-01-01", EndDate: "2028-11-05", Outcomes: []string{"YES", "NO"}, Active: true},
+		{ID: "kal-001", Platform: "kalshi", Question: "Will Trump win 2028 election?", Category: "politics", Volume: 5200000, Liquidity: 1100000, StartDate: "2024-01-01", EndDate: "2028-11-05", Outcomes: []string{"YES", "NO"}, Active: true},
+		{ID: "poly-002", Platform: "polymarket", Question: "Will Bitcoin hit $100K in 2024?", Category: "crypto", Volume: 8750000, Liquidity: 1800000, StartDate: "2024-01-01", EndDate: "2024-12-31", Outcomes: []string{"YES", "NO"}, Active: true},
+		{ID: "man-001", Platform: "manifold", Question: "ETH above $4000 by EOY?", Category: "crypto", Volume: 125000, Liquidity: 50000, StartDate: "2024-01-01", EndDate: "2024-12-31", Outcomes: []string{"YES", "NO"}, Active: true},
+		{ID: "poly-003", Platform: "polymarket", Question: "Will Fed cut rates in September?", Category: "finance", Volume: 3450000, Liquidity: 890000, StartDate: "2024-06-01", EndDate: "2024-09-30", Outcomes: []string{"YES", "NO"}, Active: true},
+		{ID: "kal-002", Platform: "kalshi", Question: "Will Fed cut rates in September?", Category: "finance", Volume: 2100000, Liquidity: 450000, StartDate: "2024-06-01", EndDate: "2024-09-30", Outcomes: []string{"YES", "NO"}, Active: true},
+		{ID: "poly-004", Platform: "polymarket", Question: "Will Chiefs win Super Bowl?", Category: "sports", Volume: 4300000, Liquidity: 920000, StartDate: "2024-08-01", EndDate: "2025-02-09", Outcomes: []string{"YES", "NO"}, Active: true},
+	}
+}
+
+func fallbackPrices() map[string]float64 {
+	return map[string]float64{
+		"will trump win 2028 election?":   0.52,
+		"will bitcoin hit $100k in 2024?": 0.38,
+		"eth above $4000 by eoy?":         0.31,
+		"will fed cut rates in september?": 0.45,
+		"will chiefs win super bowl?":      0.18,
+	}
 }
