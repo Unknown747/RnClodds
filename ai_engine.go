@@ -27,11 +27,13 @@ type ProviderResult struct {
 
 // ConsensusResult is the final decision after scoring all providers.
 type ConsensusResult struct {
-	Best       ProviderResult   `json:"best"`
-	All        []ProviderResult `json:"all"`
-	Market     string           `json:"market"`
-	Consensus  string           `json:"consensus"` // majority direction
-	AnalyzedAt time.Time        `json:"analyzedAt"`
+	Best           ProviderResult   `json:"best"`
+	All            []ProviderResult `json:"all"`
+	Market         string           `json:"market"`
+	Consensus      string           `json:"consensus"`  // majority direction
+	AgreingCount   int              `json:"agreingCount"` // how many providers agreed with best direction
+	TotalValid     int              `json:"totalValid"`
+	AnalyzedAt     time.Time        `json:"analyzedAt"`
 }
 
 type AIEngine struct {
@@ -48,7 +50,7 @@ func NewAIEngine(cfg *Config, mem *MemoryManager) *AIEngine {
 	}
 }
 
-// Analyze calls all available providers concurrently, scores results, returns best.
+// Analyze calls all available providers concurrently, scores results, enforces consensus gate, returns best.
 func (e *AIEngine) Analyze(userID, market, context string) (*ConsensusResult, error) {
 	prompt := buildPrompt(market, context)
 
@@ -88,7 +90,7 @@ func (e *AIEngine) Analyze(userID, market, context string) (*ConsensusResult, er
 	}
 	wg.Wait()
 
-	// Filter out errors, keep valid ones
+	// Filter out errors
 	var valid []ProviderResult
 	for _, r := range results {
 		if r.Error == "" {
@@ -100,20 +102,12 @@ func (e *AIEngine) Analyze(userID, market, context string) (*ConsensusResult, er
 		return nil, fmt.Errorf("all providers failed: %s", results[0].Error)
 	}
 
-	// Pick best score
-	best := valid[0]
-	for _, r := range valid[1:] {
-		if r.Score > best.Score {
-			best = r
-		}
-	}
-
-	// Majority consensus
+	// Majority consensus direction
 	counts := map[string]int{}
 	for _, r := range valid {
 		counts[r.Direction]++
 	}
-	consensus := best.Direction
+	consensus := valid[0].Direction
 	maxCount := 0
 	for dir, c := range counts {
 		if c > maxCount {
@@ -122,12 +116,50 @@ func (e *AIEngine) Analyze(userID, market, context string) (*ConsensusResult, er
 		}
 	}
 
+	// Pick best scoring provider that agrees with consensus direction (preferred),
+	// or absolute best score if none agree with consensus.
+	var consensusValid []ProviderResult
+	for _, r := range valid {
+		if r.Direction == consensus {
+			consensusValid = append(consensusValid, r)
+		}
+	}
+	pool := consensusValid
+	if len(pool) == 0 {
+		pool = valid
+	}
+	best := pool[0]
+	for _, r := range pool[1:] {
+		if r.Score > best.Score {
+			best = r
+		}
+	}
+
+	// Count how many providers agree with the best's direction
+	agreingCount := 0
+	for _, r := range valid {
+		if r.Direction == best.Direction {
+			agreingCount++
+		}
+	}
+
+	// Consensus gate: require minimum number of providers to agree
+	minConsensus := e.cfg.Risk.MinConsensusProviders
+	if minConsensus > 1 && agreingCount < minConsensus {
+		return nil, fmt.Errorf(
+			"consensus gate: only %d/%d providers agree on '%s' (need %d) — signal too weak",
+			agreingCount, len(valid), best.Direction, minConsensus,
+		)
+	}
+
 	result := &ConsensusResult{
-		Best:       best,
-		All:        results,
-		Market:     market,
-		Consensus:  consensus,
-		AnalyzedAt: time.Now(),
+		Best:         best,
+		All:          results,
+		Market:       market,
+		Consensus:    consensus,
+		AgreingCount: agreingCount,
+		TotalValid:   len(valid),
+		AnalyzedAt:   time.Now(),
 	}
 
 	slog.Info("AI consensus",
@@ -137,6 +169,8 @@ func (e *AIEngine) Analyze(userID, market, context string) (*ConsensusResult, er
 		"confidence", best.Confidence,
 		"score", best.Score,
 		"consensus", consensus,
+		"agreingProviders", agreingCount,
+		"totalValid", len(valid),
 	)
 
 	e.saveResult(userID, result)
@@ -340,7 +374,7 @@ func (e *AIEngine) callAnthropic(prompt string) ProviderResult {
 	return parseAIJSON(out.Content[0].Text, "anthropic", r.LatencyMs)
 }
 
-// parseAIJSON parses the JSON text from any provider.
+// parseAIJSON parses the JSON text returned by any provider.
 func parseAIJSON(text, provider string, latencyMs int64) ProviderResult {
 	r := ProviderResult{Provider: provider, LatencyMs: latencyMs}
 
@@ -413,22 +447,35 @@ func truncate(s string, n int) string {
 	return s[:n] + "..."
 }
 
-// saveResult stores the consensus result to SQLite.
+// saveResult stores the consensus result to SQLite for historical tracking.
 func (e *AIEngine) saveResult(userID string, r *ConsensusResult) {
-	key := fmt.Sprintf("ai_%s_%d", r.Market, r.AnalyzedAt.UnixMilli())
-	content := fmt.Sprintf("Provider=%s dir=%s conf=%.2f score=%.3f consensus=%s",
-		r.Best.Provider, r.Best.Direction, r.Best.Confidence, r.Best.Score, r.Consensus)
+	key := fmt.Sprintf("ai_%s_%d", sanitizeKey(r.Market), r.AnalyzedAt.UnixMilli())
+	content := fmt.Sprintf("Provider=%s dir=%s conf=%.2f score=%.3f consensus=%s agree=%d/%d",
+		r.Best.Provider, r.Best.Direction, r.Best.Confidence, r.Best.Score, r.Consensus, r.AgreingCount, r.TotalValid)
 	meta := map[string]interface{}{
-		"market":     r.Market,
-		"provider":   r.Best.Provider,
-		"direction":  r.Best.Direction,
-		"confidence": r.Best.Confidence,
-		"score":      r.Best.Score,
-		"consensus":  r.Consensus,
+		"market":       r.Market,
+		"provider":     r.Best.Provider,
+		"direction":    r.Best.Direction,
+		"confidence":   r.Best.Confidence,
+		"score":        r.Best.Score,
+		"consensus":    r.Consensus,
+		"agreingCount": r.AgreingCount,
+		"totalValid":   r.TotalValid,
 	}
 	if err := e.mem.Remember(userID, "context", key, content, meta); err != nil {
 		slog.Warn("Failed to save AI result", "error", err)
 	}
+}
+
+// sanitizeKey replaces characters that could break DB keys.
+func sanitizeKey(s string) string {
+	s = strings.ReplaceAll(s, " ", "_")
+	s = strings.ReplaceAll(s, "?", "")
+	s = strings.ReplaceAll(s, "/", "_")
+	if len(s) > 40 {
+		s = s[:40]
+	}
+	return s
 }
 
 const systemPromptJSON = "You are an expert prediction market trading analyst. Respond ONLY in valid JSON with fields: direction (buy/sell/hold), confidence (0.0-1.0), risk_score (0.0-1.0), reason (max 120 chars)."

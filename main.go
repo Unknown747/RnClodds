@@ -16,7 +16,7 @@ func main() {
 
 	slog.Info("CloddsBot Trading Terminal (Go) starting up")
 	slog.Info("Supported platforms: Polymarket, Kalshi, Manifold, Hyperliquid, Binance, Jupiter")
-	slog.Info("Trading features: Stop-loss, Take-profit, Trailing stop, Smart routing, AI consensus, Risk manager, Backtest")
+	slog.Info("Trading features: Stop-loss, Take-profit, Trailing stop, Smart routing, AI consensus, Risk manager, Backtest, Kelly sizing, Opportunity scanner")
 
 	cfg := LoadConfig()
 
@@ -82,6 +82,7 @@ func main() {
 			Size       float64  `json:"size"`
 			StopLoss   *float64 `json:"stopLoss"`
 			TakeProfit *float64 `json:"takeProfit"`
+			UseKelly   bool     `json:"useKelly"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			jsonError(w, "invalid request body", 400)
@@ -93,6 +94,7 @@ func main() {
 			Size:       body.Size,
 			StopLoss:   body.StopLoss,
 			TakeProfit: body.TakeProfit,
+			UseKelly:   body.UseKelly,
 		})
 		if err != nil {
 			slog.Warn("Trade execution failed", "market", body.Market, "error", err)
@@ -100,13 +102,15 @@ func main() {
 			return
 		}
 		jsonOK(w, map[string]interface{}{
-			"success":    true,
-			"orderId":    result.OrderID,
-			"platform":   result.Platform,
-			"entryPrice": result.EntryPrice,
-			"size":       result.Size,
-			"route":      result.Route,
-			"position":   result.Position,
+			"success":     true,
+			"orderId":     result.OrderID,
+			"platform":    result.Platform,
+			"entryPrice":  result.EntryPrice,
+			"size":        result.Size,
+			"kellySize":   result.KellySize,
+			"route":       result.Route,
+			"position":    result.Position,
+			"aiAnalysis":  result.AIAnalysis,
 		})
 	})
 
@@ -221,6 +225,37 @@ func main() {
 			"google":    cfg.APIKeys.Google != "",
 			"preferred": preferredAIProvider(cfg),
 		})
+	})
+
+	// --- Kelly Calculator ---
+	// GET /api/kelly?confidence=0.75 — returns optimal position size for given confidence
+	mux.HandleFunc("/api/kelly", func(w http.ResponseWriter, r *http.Request) {
+		conf, err := strconv.ParseFloat(r.URL.Query().Get("confidence"), 64)
+		if err != nil || conf < 0 || conf > 1 {
+			jsonError(w, "confidence must be 0.0–1.0", 400)
+			return
+		}
+		size := bot.ComputeKellySize(conf)
+		jsonOK(w, map[string]interface{}{
+			"confidence":      conf,
+			"kellySize":       size,
+			"kellyFraction":   cfg.Risk.KellyFraction,
+			"defaultSize":     cfg.Trading.DefaultPositionSize,
+			"maxSize":         cfg.Trading.MaxPositionSize,
+		})
+	})
+
+	// --- Opportunity Scanner ---
+	mux.HandleFunc("/api/scanner/signals", func(w http.ResponseWriter, r *http.Request) {
+		signals := bot.GetScannerSignals()
+		jsonOK(w, map[string]interface{}{
+			"signals": signals,
+			"count":   len(signals),
+		})
+	})
+
+	mux.HandleFunc("/api/scanner/status", func(w http.ResponseWriter, r *http.Request) {
+		jsonOK(w, bot.GetScannerStatus())
 	})
 
 	// --- Risk Status ---

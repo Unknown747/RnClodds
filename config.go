@@ -26,9 +26,18 @@ type Config struct {
 		MaxLeverage         int
 	}
 	Risk struct {
-		MaxDrawdown   float64
-		MaxPositions  int
-		MinConfidence float64
+		MaxDrawdown          float64
+		MaxPositions         int
+		MinConfidence        float64
+		KellyFraction        float64 // scales Kelly bet (0.25 = quarter Kelly, safer)
+		MinConsensusProviders int     // min AI providers that must agree on direction
+		ConsecutiveLossLimit int     // after N losses, raise confidence threshold
+	}
+	Scanner struct {
+		Enabled      bool
+		IntervalMins int
+		MinSignalConf float64 // min confidence to queue a signal
+		MaxSignals   int     // max signals to keep in memory
 	}
 	Platforms struct {
 		PredictionMarkets []string
@@ -45,8 +54,7 @@ type Config struct {
 }
 
 func LoadConfig() *Config {
-	// Load .env file for local defaults — real secrets must be set as Replit Secrets
-	// (env vars already set in the environment take priority over .env values)
+	// Load .env for local defaults — real secrets must be set as Replit Secrets
 	godotenv.Load()
 
 	c := &Config{}
@@ -67,10 +75,19 @@ func LoadConfig() *Config {
 	c.Trading.MaxDailyTrades = envInt("MAX_DAILY_TRADES", 20)
 	c.Trading.MaxLeverage = envInt("MAX_LEVERAGE", 5)
 
-	// Risk parameters (all configurable via env)
+	// Risk parameters
 	c.Risk.MaxDrawdown = envFloat("MAX_DRAWDOWN", 20.0)
 	c.Risk.MaxPositions = envInt("MAX_POSITIONS", 10)
 	c.Risk.MinConfidence = envFloat("MIN_CONFIDENCE", 0.6)
+	c.Risk.KellyFraction = envFloat("KELLY_FRACTION", 0.25)      // quarter Kelly — conservative
+	c.Risk.MinConsensusProviders = envInt("MIN_CONSENSUS", 1)     // require N providers to agree
+	c.Risk.ConsecutiveLossLimit = envInt("CONSECUTIVE_LOSS_LIMIT", 3) // raise threshold after 3 losses
+
+	// Opportunity scanner
+	c.Scanner.Enabled = getenv("SCANNER_ENABLED", "true") == "true"
+	c.Scanner.IntervalMins = envInt("SCANNER_INTERVAL_MINS", 10)
+	c.Scanner.MinSignalConf = envFloat("SCANNER_MIN_CONF", 0.75)
+	c.Scanner.MaxSignals = envInt("SCANNER_MAX_SIGNALS", 20)
 
 	// Supported platforms
 	c.Platforms.PredictionMarkets = []string{"polymarket", "kalshi", "manifold"}
