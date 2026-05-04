@@ -1,4 +1,4 @@
-modules = ["nodejs-20", "go-1.21", "go-1.25"]
+modules = ["go-1.21", "web", "bash"]
 [agent]
 expertMode = true
 stack = "BEST_EFFORT_FALLBACK"
@@ -37,3 +37,11 @@ externalPort = 80
 [deployment]
 deploymentTarget = "vm"
 run = ["go", "run", "."]
+
+[userenv]
+
+[userenv.shared]
+DEFAULT_POSITION_SIZE = "100"
+MAX_POSITION_SIZE = "1000"
+MAX_DAILY_LOSS = "500"
+DB_PATH = "./clodds.db"
