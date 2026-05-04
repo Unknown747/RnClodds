@@ -14,10 +14,14 @@ type cacheEntry struct {
 type Cache struct {
 	mu      sync.RWMutex
 	entries map[string]cacheEntry
+	stopCh  chan struct{}
 }
 
 func NewCache() *Cache {
-	c := &Cache{entries: make(map[string]cacheEntry)}
+	c := &Cache{
+		entries: make(map[string]cacheEntry),
+		stopCh:  make(chan struct{}),
+	}
 	go c.evict()
 	return c
 }
@@ -50,18 +54,33 @@ func (c *Cache) Size() int {
 	return len(c.entries)
 }
 
-// evict removes expired entries every 60 seconds.
+// Stop halts the background eviction goroutine.
+func (c *Cache) Stop() {
+	select {
+	case <-c.stopCh:
+		// already stopped
+	default:
+		close(c.stopCh)
+	}
+}
+
+// evict removes expired entries every 60 seconds until Stop() is called.
 func (c *Cache) evict() {
 	ticker := time.NewTicker(60 * time.Second)
 	defer ticker.Stop()
-	for range ticker.C {
-		now := time.Now()
-		c.mu.Lock()
-		for k, e := range c.entries {
-			if now.After(e.expiresAt) {
-				delete(c.entries, k)
+	for {
+		select {
+		case <-ticker.C:
+			now := time.Now()
+			c.mu.Lock()
+			for k, e := range c.entries {
+				if now.After(e.expiresAt) {
+					delete(c.entries, k)
+				}
 			}
+			c.mu.Unlock()
+		case <-c.stopCh:
+			return
 		}
-		c.mu.Unlock()
 	}
 }

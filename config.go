@@ -1,103 +1,128 @@
 package main
 
 import (
-        "os"
-        "strconv"
+	"os"
+	"strconv"
 
-        "github.com/joho/godotenv"
+	"github.com/joho/godotenv"
 )
 
 type Config struct {
-        APIKeys struct {
-                Anthropic string
-                OpenAI    string
-                Google    string
-                Groq      string
-        }
-        AI struct {
-                Providers []string
-                DefaultModel string
-        }
-        Trading struct {
-                DefaultPositionSize int
-                MaxPositionSize     int
-                MaxDailyLoss        int
-                MaxDailyTrades      int
-                MaxLeverage         int
-        }
-        Risk struct {
-                MaxDrawdown   float64
-                MaxPositions  int
-                MinConfidence float64
-        }
-        Platforms struct {
-                PredictionMarkets []string
-                Futures           []string
-                DEX               []string
-        }
-        Server struct {
-                Port string
-                Host string
-        }
-        DBPath string
+	APIKeys struct {
+		Anthropic string
+		OpenAI    string
+		Google    string
+		Groq      string
+	}
+	AI struct {
+		Providers    []string
+		DefaultModel string
+	}
+	Trading struct {
+		DefaultPositionSize int
+		MaxPositionSize     int
+		MaxDailyLoss        int
+		MaxDailyTrades      int
+		MaxLeverage         int
+	}
+	Risk struct {
+		MaxDrawdown   float64
+		MaxPositions  int
+		MinConfidence float64
+	}
+	Platforms struct {
+		PredictionMarkets []string
+		Futures           []string
+		DEX               []string
+	}
+	Server struct {
+		Port string
+		Host string
+	}
+	DBPath      string
+	TradingMode string
+	UserID      string
 }
 
 func LoadConfig() *Config {
-        godotenv.Load()
+	// Load .env file for local defaults — real secrets must be set as Replit Secrets
+	// (env vars already set in the environment take priority over .env values)
+	godotenv.Load()
 
-        c := &Config{}
-        c.APIKeys.Anthropic = os.Getenv("ANTHROPIC_API_KEY")
-        c.APIKeys.OpenAI = os.Getenv("OPENAI_API_KEY")
-        c.APIKeys.Google = os.Getenv("GOOGLE_API_KEY")
-        c.APIKeys.Groq = os.Getenv("GROQ_API_KEY")
-        c.AI.Providers = []string{"google", "groq", "anthropic", "openai"}
-        c.AI.DefaultModel = getenv("AI_DEFAULT_MODEL", "google")
+	c := &Config{}
 
-        c.Trading.DefaultPositionSize = envInt("DEFAULT_POSITION_SIZE", 100)
-        c.Trading.MaxPositionSize = envInt("MAX_POSITION_SIZE", 1000)
-        c.Trading.MaxDailyLoss = envInt("MAX_DAILY_LOSS", 500)
-        c.Trading.MaxDailyTrades = envInt("MAX_DAILY_TRADES", 20)
-        c.Trading.MaxLeverage = 5
+	// AI provider API keys (set via Replit Secrets)
+	c.APIKeys.Anthropic = os.Getenv("ANTHROPIC_API_KEY")
+	c.APIKeys.OpenAI = os.Getenv("OPENAI_API_KEY")
+	c.APIKeys.Google = os.Getenv("GOOGLE_API_KEY")
+	c.APIKeys.Groq = os.Getenv("GROQ_API_KEY")
 
-        c.Risk.MaxDrawdown = 20
-        c.Risk.MaxPositions = 10
-        c.Risk.MinConfidence = 0.6
+	c.AI.Providers = []string{"google", "groq", "anthropic", "openai"}
+	c.AI.DefaultModel = getenv("AI_DEFAULT_MODEL", "google")
 
-        c.Platforms.PredictionMarkets = []string{"polymarket", "kalshi", "manifold"}
-        c.Platforms.Futures = []string{"hyperliquid", "binance", "bybit"}
-        c.Platforms.DEX = []string{"jupiter", "raydium", "pumpdotfun"}
+	// Trading limits
+	c.Trading.DefaultPositionSize = envInt("DEFAULT_POSITION_SIZE", 100)
+	c.Trading.MaxPositionSize = envInt("MAX_POSITION_SIZE", 1000)
+	c.Trading.MaxDailyLoss = envInt("MAX_DAILY_LOSS", 500)
+	c.Trading.MaxDailyTrades = envInt("MAX_DAILY_TRADES", 20)
+	c.Trading.MaxLeverage = envInt("MAX_LEVERAGE", 5)
 
-        port := os.Getenv("PORT")
-        if port == "" {
-                port = "5000"
-        }
-        c.Server.Port = port
-        c.Server.Host = "0.0.0.0"
+	// Risk parameters (all configurable via env)
+	c.Risk.MaxDrawdown = envFloat("MAX_DRAWDOWN", 20.0)
+	c.Risk.MaxPositions = envInt("MAX_POSITIONS", 10)
+	c.Risk.MinConfidence = envFloat("MIN_CONFIDENCE", 0.6)
 
-        c.DBPath = os.Getenv("DB_PATH")
-        if c.DBPath == "" {
-                c.DBPath = "./clodds.db"
-        }
+	// Supported platforms
+	c.Platforms.PredictionMarkets = []string{"polymarket", "kalshi", "manifold"}
+	c.Platforms.Futures = []string{"hyperliquid", "binance", "bybit"}
+	c.Platforms.DEX = []string{"jupiter", "raydium", "pumpdotfun"}
 
-        return c
+	// Server
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "5000"
+	}
+	c.Server.Port = port
+	c.Server.Host = "0.0.0.0"
+
+	// Storage
+	c.DBPath = getenv("DB_PATH", "./clodds.db")
+
+	// Bot behaviour
+	c.TradingMode = getenv("TRADING_MODE", "balanced")
+	c.UserID = getenv("USER_ID", "cli-user")
+
+	return c
 }
 
 func envInt(key string, def int) int {
-        s := os.Getenv(key)
-        if s == "" {
-                return def
-        }
-        v, err := strconv.Atoi(s)
-        if err != nil {
-                return def
-        }
-        return v
+	s := os.Getenv(key)
+	if s == "" {
+		return def
+	}
+	v, err := strconv.Atoi(s)
+	if err != nil {
+		return def
+	}
+	return v
+}
+
+func envFloat(key string, def float64) float64 {
+	s := os.Getenv(key)
+	if s == "" {
+		return def
+	}
+	v, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return def
+	}
+	return v
 }
 
 func getenv(key, def string) string {
-        s := os.Getenv(key)
-        if s == "" {
-                return def
-        }
-        return s
+	s := os.Getenv(key)
+	if s == "" {
+		return def
+	}
+	return s
 }

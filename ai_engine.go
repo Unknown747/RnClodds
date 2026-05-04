@@ -27,11 +27,11 @@ type ProviderResult struct {
 
 // ConsensusResult is the final decision after scoring all providers.
 type ConsensusResult struct {
-	Best      ProviderResult   `json:"best"`
-	All       []ProviderResult `json:"all"`
-	Market    string           `json:"market"`
-	Consensus string           `json:"consensus"` // majority direction
-	AnalyzedAt time.Time       `json:"analyzedAt"`
+	Best       ProviderResult   `json:"best"`
+	All        []ProviderResult `json:"all"`
+	Market     string           `json:"market"`
+	Consensus  string           `json:"consensus"` // majority direction
+	AnalyzedAt time.Time        `json:"analyzedAt"`
 }
 
 type AIEngine struct {
@@ -67,6 +67,9 @@ func (e *AIEngine) Analyze(userID, market, context string) (*ConsensusResult, er
 	if e.cfg.APIKeys.OpenAI != "" {
 		jobs = append(jobs, job{"openai", e.callOpenAI})
 	}
+	if e.cfg.APIKeys.Anthropic != "" {
+		jobs = append(jobs, job{"anthropic", e.callAnthropic})
+	}
 
 	if len(jobs) == 0 {
 		return nil, fmt.Errorf("no AI providers configured")
@@ -94,7 +97,6 @@ func (e *AIEngine) Analyze(userID, market, context string) (*ConsensusResult, er
 	}
 
 	if len(valid) == 0 {
-		// All failed — return first error
 		return nil, fmt.Errorf("all providers failed: %s", results[0].Error)
 	}
 
@@ -137,7 +139,6 @@ func (e *AIEngine) Analyze(userID, market, context string) (*ConsensusResult, er
 		"consensus", consensus,
 	)
 
-	// Save result to memory
 	e.saveResult(userID, result)
 	return result, nil
 }
@@ -150,7 +151,7 @@ func (e *AIEngine) callGroq(prompt string) ProviderResult {
 	body := map[string]interface{}{
 		"model": "llama-3.3-70b-versatile",
 		"messages": []map[string]string{
-			{"role": "system", "content": "You are an expert prediction market trading analyst. Respond ONLY in valid JSON with fields: direction (buy/sell/hold), confidence (0.0-1.0), risk_score (0.0-1.0), reason (max 120 chars)."},
+			{"role": "system", "content": systemPromptJSON},
 			{"role": "user", "content": prompt},
 		},
 		"response_format": map[string]string{"type": "json_object"},
@@ -173,7 +174,7 @@ func (e *AIEngine) callGroq(prompt string) ProviderResult {
 
 	raw, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != 200 {
-		r.Error = fmt.Sprintf("groq HTTP %d: %s", resp.StatusCode, string(raw))
+		r.Error = fmt.Sprintf("groq HTTP %d: %s", resp.StatusCode, truncate(string(raw), 200))
 		return r
 	}
 
@@ -186,7 +187,6 @@ func (e *AIEngine) callGroq(prompt string) ProviderResult {
 		r.Error = "failed to parse groq response"
 		return r
 	}
-
 	return parseAIJSON(out.Choices[0].Message.Content, "groq", r.LatencyMs)
 }
 
@@ -195,14 +195,12 @@ func (e *AIEngine) callGemini(prompt string) ProviderResult {
 	start := time.Now()
 	r := ProviderResult{Provider: "google"}
 
-	systemPrompt := "You are an expert prediction market trading analyst. Respond ONLY in valid JSON with fields: direction (buy/sell/hold), confidence (0.0-1.0), risk_score (0.0-1.0), reason (max 120 chars)."
-
 	body := map[string]interface{}{
 		"contents": []map[string]interface{}{
 			{
 				"role": "user",
 				"parts": []map[string]string{
-					{"text": systemPrompt + "\n\n" + prompt},
+					{"text": systemPromptJSON + "\n\n" + prompt},
 				},
 			},
 		},
@@ -228,7 +226,7 @@ func (e *AIEngine) callGemini(prompt string) ProviderResult {
 
 	raw, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != 200 {
-		r.Error = fmt.Sprintf("gemini HTTP %d: %s", resp.StatusCode, string(raw))
+		r.Error = fmt.Sprintf("gemini HTTP %d: %s", resp.StatusCode, truncate(string(raw), 200))
 		return r
 	}
 
@@ -245,11 +243,10 @@ func (e *AIEngine) callGemini(prompt string) ProviderResult {
 		r.Error = "failed to parse gemini response"
 		return r
 	}
-
 	return parseAIJSON(out.Candidates[0].Content.Parts[0].Text, "google", r.LatencyMs)
 }
 
-// callOpenAI calls the OpenAI API (fallback).
+// callOpenAI calls the OpenAI API.
 func (e *AIEngine) callOpenAI(prompt string) ProviderResult {
 	start := time.Now()
 	r := ProviderResult{Provider: "openai"}
@@ -257,7 +254,7 @@ func (e *AIEngine) callOpenAI(prompt string) ProviderResult {
 	body := map[string]interface{}{
 		"model": "gpt-4o-mini",
 		"messages": []map[string]string{
-			{"role": "system", "content": "You are an expert prediction market trading analyst. Respond ONLY in valid JSON with fields: direction (buy/sell/hold), confidence (0.0-1.0), risk_score (0.0-1.0), reason (max 120 chars)."},
+			{"role": "system", "content": systemPromptJSON},
 			{"role": "user", "content": prompt},
 		},
 		"response_format": map[string]string{"type": "json_object"},
@@ -280,7 +277,7 @@ func (e *AIEngine) callOpenAI(prompt string) ProviderResult {
 
 	raw, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != 200 {
-		r.Error = fmt.Sprintf("openai HTTP %d: %s", resp.StatusCode, string(raw))
+		r.Error = fmt.Sprintf("openai HTTP %d: %s", resp.StatusCode, truncate(string(raw), 200))
 		return r
 	}
 
@@ -293,8 +290,54 @@ func (e *AIEngine) callOpenAI(prompt string) ProviderResult {
 		r.Error = "failed to parse openai response"
 		return r
 	}
-
 	return parseAIJSON(out.Choices[0].Message.Content, "openai", r.LatencyMs)
+}
+
+// callAnthropic calls the Anthropic Claude API.
+func (e *AIEngine) callAnthropic(prompt string) ProviderResult {
+	start := time.Now()
+	r := ProviderResult{Provider: "anthropic"}
+
+	body := map[string]interface{}{
+		"model":      "claude-3-haiku-20240307",
+		"max_tokens": 200,
+		"system":     systemPromptJSON,
+		"messages": []map[string]string{
+			{"role": "user", "content": prompt},
+		},
+	}
+
+	data, _ := json.Marshal(body)
+	req, _ := http.NewRequest("POST", "https://api.anthropic.com/v1/messages", bytes.NewReader(data))
+	req.Header.Set("x-api-key", e.cfg.APIKeys.Anthropic)
+	req.Header.Set("anthropic-version", "2023-06-01")
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := e.client.Do(req)
+	r.LatencyMs = time.Since(start).Milliseconds()
+	if err != nil {
+		r.Error = err.Error()
+		return r
+	}
+	defer resp.Body.Close()
+
+	raw, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != 200 {
+		r.Error = fmt.Sprintf("anthropic HTTP %d: %s", resp.StatusCode, truncate(string(raw), 200))
+		return r
+	}
+
+	var out struct {
+		Content []struct {
+			Type string `json:"type"`
+			Text string `json:"text"`
+		} `json:"content"`
+	}
+	if err := json.Unmarshal(raw, &out); err != nil || len(out.Content) == 0 {
+		r.Error = "failed to parse anthropic response"
+		return r
+	}
+	return parseAIJSON(out.Content[0].Text, "anthropic", r.LatencyMs)
 }
 
 // parseAIJSON parses the JSON text from any provider.
@@ -302,7 +345,6 @@ func parseAIJSON(text, provider string, latencyMs int64) ProviderResult {
 	r := ProviderResult{Provider: provider, LatencyMs: latencyMs}
 
 	text = strings.TrimSpace(text)
-	// Strip markdown code fences if present
 	text = strings.TrimPrefix(text, "```json")
 	text = strings.TrimPrefix(text, "```")
 	text = strings.TrimSuffix(text, "```")
@@ -315,7 +357,7 @@ func parseAIJSON(text, provider string, latencyMs int64) ProviderResult {
 		Reason     string  `json:"reason"`
 	}
 	if err := json.Unmarshal([]byte(text), &parsed); err != nil {
-		r.Error = fmt.Sprintf("json parse error: %s | raw: %s", err.Error(), text)
+		r.Error = fmt.Sprintf("json parse error: %s | raw: %s", err.Error(), truncate(text, 120))
 		return r
 	}
 
@@ -364,6 +406,13 @@ func clamp(v, lo, hi float64) float64 {
 	return v
 }
 
+func truncate(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	return s[:n] + "..."
+}
+
 // saveResult stores the consensus result to SQLite.
 func (e *AIEngine) saveResult(userID string, r *ConsensusResult) {
 	key := fmt.Sprintf("ai_%s_%d", r.Market, r.AnalyzedAt.UnixMilli())
@@ -381,3 +430,5 @@ func (e *AIEngine) saveResult(userID string, r *ConsensusResult) {
 		slog.Warn("Failed to save AI result", "error", err)
 	}
 }
+
+const systemPromptJSON = "You are an expert prediction market trading analyst. Respond ONLY in valid JSON with fields: direction (buy/sell/hold), confidence (0.0-1.0), risk_score (0.0-1.0), reason (max 120 chars)."

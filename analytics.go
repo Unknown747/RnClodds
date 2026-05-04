@@ -32,7 +32,7 @@ type AnalyticsData struct {
 	DailyPnL       float64                  `json:"dailyPnL"`
 }
 
-// GetAnalytics queries the SQLite DB for historical trading analytics.
+// GetAnalytics queries SQLite for historical trading analytics.
 func (mm *MemoryManager) GetAnalytics(userID string) (*AnalyticsData, error) {
 	data := &AnalyticsData{
 		ByPlatform:     make(map[string]*PlatformStat),
@@ -85,6 +85,9 @@ func (mm *MemoryManager) GetAnalytics(userID string) (*AnalyticsData, error) {
 		}
 		data.ByPlatform[platform].Trades++
 	}
+	if err := tradeRows.Err(); err != nil {
+		return nil, err
+	}
 
 	// 4. Journal entries — P&L stats and win rate
 	journalRows, err := mm.db.Query(
@@ -106,7 +109,6 @@ func (mm *MemoryManager) GetAnalytics(userID string) (*AnalyticsData, error) {
 		if err := journalRows.Scan(&key, &content, &rawMeta); err != nil {
 			continue
 		}
-
 		var meta map[string]interface{}
 		if err := json.Unmarshal([]byte(rawMeta), &meta); err != nil {
 			continue
@@ -118,21 +120,19 @@ func (mm *MemoryManager) GetAnalytics(userID string) (*AnalyticsData, error) {
 			trades = int(t)
 		}
 
-		// Strip "journal_" prefix to get date
+		// Strip "journal_" prefix (8 chars) to get date string
 		date := key
 		if len(key) > 8 {
 			date = key[8:]
 		}
 
-		entry := JournalEntry{
+		data.RecentJournals = append(data.RecentJournals, JournalEntry{
 			Date:   date,
 			Trades: trades,
 			PnL:    pnl,
 			Notes:  content,
-		}
-		data.RecentJournals = append(data.RecentJournals, entry)
+		})
 
-		// Accumulate stats
 		data.TotalPnL += pnl
 		journalCount++
 		if pnl > 0 {
@@ -144,9 +144,9 @@ func (mm *MemoryManager) GetAnalytics(userID string) (*AnalyticsData, error) {
 		if pnl < data.WorstTrade {
 			data.WorstTrade = pnl
 		}
-
-		// Credit per-platform P&L (best effort via content parsing)
-		_ = entry
+	}
+	if err := journalRows.Err(); err != nil {
+		return nil, err
 	}
 
 	// Compute derived stats
@@ -170,16 +170,5 @@ func (mm *MemoryManager) GetAnalytics(userID string) (*AnalyticsData, error) {
 		"winRate", data.WinRate,
 	)
 
-	return data, nil
-}
-
-// GetAnalytics on TradingBot merges DB history with live session stats.
-func (b *TradingBot) GetAnalytics() (*AnalyticsData, error) {
-	data, err := b.memory.GetAnalytics(b.userID)
-	if err != nil {
-		return nil, err
-	}
-	data.DailyTrades = b.dailyTrades
-	data.DailyPnL = math.Round(b.dailyPnL*100) / 100
 	return data, nil
 }

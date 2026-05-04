@@ -34,14 +34,14 @@ type MarketIndex struct {
 	platforms   []string
 	markets     []Market
 	lastUpdated *time.Time
-	autoRefresh bool
+	stopCh      chan struct{}
 }
 
 func NewMarketIndex(platforms []string, autoRefresh bool) *MarketIndex {
 	mi := &MarketIndex{
-		platforms:   platforms,
-		autoRefresh: autoRefresh,
-		markets:     initMockMarkets(),
+		platforms: platforms,
+		markets:   initMockMarkets(),
+		stopCh:    make(chan struct{}),
 	}
 	if autoRefresh {
 		go mi.startAutoRefresh()
@@ -61,10 +61,27 @@ func initMockMarkets() []Market {
 	}
 }
 
+// startAutoRefresh refreshes market data every 5 minutes until Stop() is called.
 func (mi *MarketIndex) startAutoRefresh() {
 	ticker := time.NewTicker(5 * time.Minute)
-	for range ticker.C {
-		mi.Update("")
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			mi.Update("")
+		case <-mi.stopCh:
+			return
+		}
+	}
+}
+
+// Stop signals the auto-refresh goroutine to exit.
+func (mi *MarketIndex) Stop() {
+	select {
+	case <-mi.stopCh:
+		// already closed
+	default:
+		close(mi.stopCh)
 	}
 }
 
